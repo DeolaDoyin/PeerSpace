@@ -10,11 +10,12 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+Route::get('posts', [PostController::class, 'index']);
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
     
     // Posts
-    Route::get('posts', [PostController::class, 'index']);
+    // Route::get('posts', [PostController::class, 'index']);
     Route::get('posts/{post:slug}', [PostController::class, 'show'])->name('posts.show');
     Route::resource('posts', PostController::class)->except(['index', 'show']); 
 

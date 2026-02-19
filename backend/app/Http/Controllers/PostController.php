@@ -4,18 +4,28 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class PostController extends Controller
 {
     // List all posts in a category
-    public function index(Category $category)
+    // public function index(Category $category)
+    // {
+    //     return $category->posts()
+    //     ->with('creator')
+    //     ->withCount('comments')
+    //     ->orderBy('is_pinned', 'desc')
+    //     ->latest()
+    //     ->get();
+    // }
+
+    public function index(): JsonResponse
     {
-        return $category->posts()
-        ->with('creator')
-        ->withCount('comments')
-        ->orderBy('is_pinned', 'desc')
-        ->latest()
-        ->get();
+        // Fetch all posts from the DB
+        $posts = Post::all();
+
+        // Return them as a JSON response
+        return response()->json($posts);
     }
 
     // Get a specific post
