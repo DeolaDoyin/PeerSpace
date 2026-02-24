@@ -69,3 +69,4 @@ const AnonAvatar = ({ size = "md", className }: AnonAvatarProps) => {
 };
 
 export default AnonAvatar;
+

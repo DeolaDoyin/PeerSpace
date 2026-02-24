@@ -1,7 +1,6 @@
 import { MessageCircle, Users, User } from "lucide-react";
-import { NavLink } from "./NavLink";
 import { cn } from "@/lib/utils";
-
+import { NavLink } from "react-router-dom";
 const navItems = [
   { to: "/chats", icon: MessageCircle, label: "Chats" },
   { to: "/forum", icon: Users, label: "Forum" },
@@ -16,11 +15,13 @@ const BottomNav = () => {
           <NavLink
             key={item.to}
             to={item.to}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 px-6 py-2 rounded-2xl transition-all duration-200",
-              "text-muted-foreground hover:text-foreground"
-            )}
-            activeClassName="bg-nav-active text-primary"
+            className={({ isActive }) =>
+              cn(
+                "flex flex-col items-center justify-center gap-1 px-6 py-2 rounded-2xl transition-all duration-200",
+                "text-muted-foreground hover:text-foreground",
+                isActive && "bg-nav-active text-primary"
+              )
+            }
           >
             <item.icon className="h-5 w-5" />
             <span className="text-xs font-medium">{item.label}</span>
@@ -32,3 +33,4 @@ const BottomNav = () => {
 };
 
 export default BottomNav;
+

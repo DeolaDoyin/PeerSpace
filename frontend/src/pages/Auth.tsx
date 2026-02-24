@@ -38,7 +38,7 @@ const Auth = () => {
     e.preventDefault();
     if (validate()) {
       // For now, just navigate to chats (will add real auth later)
-      navigate("/chats");
+      navigate("/Forum");
     }
   };
 

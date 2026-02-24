@@ -2,13 +2,16 @@ import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 
+// Make sure your prop is typed correctly:
+
+
 interface SettingsItemProps {
   label: string;
   onClick?: () => void;
   hasArrow?: boolean;
   hasCheckbox?: boolean;
   checked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
+  onCheckedChange?: (checked: boolean) => void; // this works too
   variant?: "default" | "destructive";
   icon?: React.ReactNode;
 }
@@ -38,11 +41,11 @@ const SettingsItem = ({
         <ChevronRight className="h-5 w-5 text-muted-foreground" />
       )}
       {hasCheckbox && (
-        <Checkbox
-          checked={checked}
-          onCheckedChange={onCheckedChange}
-          onClick={(e) => e.stopPropagation()}
-        />
+       <Checkbox
+  checked={checked}
+  onCheckedChange={onCheckedChange ? (val: boolean) => onCheckedChange(val) : undefined}
+  onClick={(e) => e.stopPropagation()}
+/>
       )}
       {icon && icon}
     </button>
