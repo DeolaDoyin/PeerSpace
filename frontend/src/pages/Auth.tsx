@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "@/api/axios";
 import FloatingInput from "@/components/FloatingInput";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(false);
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -19,11 +23,15 @@ const Auth = () => {
     } else if (username.length < 3) {
       newErrors.username = "Username must be at least 3 characters";
     }
+
+    if (!isLogin && !email.includes("@")) {
+      newErrors.email = "Please enter a valid email";
+    }
     
     if (!password) {
       newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
     }
     
     if (!isLogin && password !== confirmPassword) {
@@ -34,11 +42,63 @@ const Auth = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // handleSubmit async to handle API calls
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
-      // For now, just navigate to chats (will add real auth later)
+    if (!validate()) return;
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      // STEP 1: Get the CSRF Cookie (Handshake)
+      await api.get("/sanctum/csrf-cookie");
+
+      // --- MANUAL TOKEN INJECTION START ---
+      // We pull the token directly from the cookie the browser just received
+      const xsrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1];
+      // --- MANUAL TOKEN INJECTION END ---
+
+      // STEP 2: Prepare the data
+      const endpoint = isLogin ? "/api/login" : "/api/register";
+      const payload = isLogin 
+        ? { login: username, password } 
+        : { 
+            name: username, 
+            email, 
+            password, 
+            password_confirmation: confirmPassword 
+          };
+
+      // STEP 3: Send the request with the token in the header
+      const response = await api.post(endpoint, payload, {
+        headers: {
+            'X-XSRF-TOKEN': decodeURIComponent(xsrfToken || ''),
+        }
+      });
+      
+      console.log("Success:", response.data);
+      
+      // STEP 4: Navigate on success
+      localStorage.setItem('token', response.data.token)
       navigate("/Forum");
+    } catch (err: any) {
+      // STEP 5: Catch Errors
+      if (err.response?.status === 422) {
+        const serverErrors: any = {};
+        Object.keys(err.response.data.errors).forEach((key) => {
+          serverErrors[key === 'name' ? 'username' : key] = err.response.data.errors[key][0];
+        });
+        setErrors(serverErrors);
+      } else {
+        // If it's a 419, it will land here
+        setErrors({ general: "Session expired or CSRF mismatch (419)." });
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -53,14 +113,32 @@ const Auth = () => {
           </p>
         </div>
 
+        {errors.general && (
+          <div className="p-3 text-sm text-red-500 bg-red-100 rounded-lg text-center">
+            {errors.general}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <FloatingInput
-            label="Enter Username"
+            label={isLogin ? "Username or Email" : "Username"}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            error={errors.username}
+            error={errors.username || errors.login}
             autoComplete="username"
           />
+
+          {/* Email field only for registration */}
+          {!isLogin && (
+            <FloatingInput
+              label="Email Address"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={errors.email}
+              autoComplete="email"
+            />
+          )}
           
           <FloatingInput
             label="Enter Password"
@@ -73,7 +151,7 @@ const Auth = () => {
           
           {!isLogin && (
             <FloatingInput
-              label="Enter Password (Again)"
+              label="Confirm Password"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -96,8 +174,8 @@ const Auth = () => {
             </button>
           </div>
 
-          <Button type="submit" className="w-full h-12 text-base rounded-xl">
-            {isLogin ? "Login" : "Sign Up"}
+          <Button type="submit" className="w-full h-12 text-base rounded-xl" disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (isLogin ? "Login" : "Sign Up")}
           </Button>
         </form>
 
