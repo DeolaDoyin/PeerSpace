@@ -8,7 +8,7 @@ const DebugPage = () => {
     useEffect(() => {
         setStatus('Connecting to Laravel...');
         
-        api.get('/posts')
+        api.get('/api/posts')
             .then(res => {
                 setStatus('Success! Connection established.');
                 console.log('Data received:', res.data);
