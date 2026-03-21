@@ -1,3 +1,4 @@
+import api from "@/api/axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Bell, Pencil, Share2, Trash2 } from "lucide-react";
@@ -21,8 +22,18 @@ const Profile = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState(false);
 
-  const handleLogout = () => {
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+        // Tell Laravel to kill the session/token
+        await api.post('/api/logout');
+    } catch (error) {
+        console.error("Server logout failed", error);
+    } finally {
+        //Clear token from local storage
+        localStorage.removeItem('token');
+        
+        window.location.href = '/login'; 
+    }
   };
 
   return (

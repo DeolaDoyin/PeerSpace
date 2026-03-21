@@ -5,17 +5,22 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\AuthController;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// Route::get('posts', [PostController::class, 'index']);
 
-Route::get('posts', [PostController::class, 'index']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout']);
+
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
-    
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
+
     // Posts
-    // Route::get('posts', [PostController::class, 'index']);
+    Route::get('posts', [PostController::class, 'index']);
     Route::get('posts/{post:slug}', [PostController::class, 'show'])->name('posts.show');
     Route::resource('posts', PostController::class)->except(['index', 'show']); 
 

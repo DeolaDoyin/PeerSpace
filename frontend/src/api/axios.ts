@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://127.0.0.1:8000',
+    baseURL: `http://${window.location.hostname}:8000`,
     withCredentials: true, // Required for Sanctum cookies
     headers: {
         'Accept': 'application/json',
@@ -10,6 +10,16 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+    // Manually read XSRF-TOKEN cookie because Axios drops it for cross-port requests
+    const xsrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1];
+
+    if (xsrfToken) {
+        config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
+    }
+
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;

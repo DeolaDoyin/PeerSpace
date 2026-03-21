@@ -51,18 +51,7 @@ const Auth = () => {
     setErrors({});
 
     try {
-      // STEP 1: Get the CSRF Cookie (Handshake)
-      await api.get("/sanctum/csrf-cookie");
-
-      // --- MANUAL TOKEN INJECTION START ---
-      // We pull the token directly from the cookie the browser just received
-      const xsrfToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('XSRF-TOKEN='))
-        ?.split('=')[1];
-      // --- MANUAL TOKEN INJECTION END ---
-
-      // STEP 2: Prepare the data
+      // Prepare the data
       const endpoint = isLogin ? "/api/login" : "/api/register";
       const payload = isLogin 
         ? { login: username, password } 
@@ -73,29 +62,32 @@ const Auth = () => {
             password_confirmation: confirmPassword 
           };
 
-      // STEP 3: Send the request with the token in the header
-      const response = await api.post(endpoint, payload, {
-        headers: {
-            'X-XSRF-TOKEN': decodeURIComponent(xsrfToken || ''),
-        }
-      });
+      // Initialize CSRF protection
+      await api.get('/sanctum/csrf-cookie');
+
+      // Send the request with the token in the header
+      const response = await api.post(endpoint, payload);
       
       console.log("Success:", response.data);
       
-      // STEP 4: Navigate on success
+      // Navigate on success
       localStorage.setItem('token', response.data.token)
       navigate("/Forum");
-    } catch (err: any) {
-      // STEP 5: Catch Errors
+        } catch (err: any) {
+      // Catch Errors
       if (err.response?.status === 422) {
+        // Handle validation errors
         const serverErrors: any = {};
         Object.keys(err.response.data.errors).forEach((key) => {
           serverErrors[key === 'name' ? 'username' : key] = err.response.data.errors[key][0];
         });
         setErrors(serverErrors);
+      } else if (err.response?.status === 401) {
+        // Handle incorrect login credentials
+        setErrors({ general: "Invalid username or password." });
       } else {
-        // If it's a 419, it will land here
-        setErrors({ general: "Session expired or CSRF mismatch (419)." });
+        // Handle network errors, 500 server errors, etc.
+        setErrors({ general: "Something went wrong. Please try again later." });
       }
     } finally {
       setIsLoading(false);
