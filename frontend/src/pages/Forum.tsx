@@ -15,7 +15,7 @@ interface Post {
 const Forum = () => {
   // 1. Define the fetcher function
   const fetchPosts = async (): Promise<Post[]> => {
-    const { data } = await api.get('api/posts');
+    const { data } = await api.get('/api/posts');
     return data;
   };
 

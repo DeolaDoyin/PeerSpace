@@ -15,11 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi(); // Required for Sanctum/React auth
-        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
-        
+
         $middleware->alias([
             'moderator' => \App\Http\Middleware\EnsureUserIsModerator::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
+            'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -5,5 +5,5 @@ export const login = async (credentials: { login: string; password: string }) =>
     await api.get('/sanctum/csrf-cookie');
     
     // 2. Now send the actual login request
-    return api.post('/login', credentials);
+    return api.post('/api/login', credentials);
 };
