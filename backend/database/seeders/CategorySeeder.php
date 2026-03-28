@@ -15,11 +15,13 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            ['name' => 'General Support', 'description' => 'A place for general peer conversation.'],
-            ['name' => 'Anxiety & Stress', 'description' => 'Talk about managing daily pressures.'],
-            ['name' => 'Depression & Low Mood', 'description' => 'A safe space for those feeling down.'],
-            ['name' => 'Recovery Stories', 'description' => 'Share your journey and successes.'],
-            ['name' => 'Emergency Resources', 'description' => 'Important links and hotlines.']
+            ['name' => 'General', 'description' => 'A place for general peer conversation.'],
+            ['name' => 'Anxiety', 'description' => 'Talk about managing daily pressures.'],
+            ['name' => 'Depression', 'description' => 'A safe space for those feeling down.'],
+            ['name' => 'Loneliness', 'description' => 'A place for those feeling alone.'],
+            ['name' => 'Relationships', 'description' => 'Discuss friendships, family, and more.'],
+            ['name' => 'Emergency Resources', 'description' => 'Important links and hotlines.'],
+            ['name' => 'Others', 'description' => 'For topics that don\'t fit elsewhere.'],
         ];
 
         foreach ($categories as $category) {

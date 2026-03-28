@@ -1,7 +1,8 @@
 import api from "@/api/axios";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Menu, Bell, Pencil, Share2, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, Link } from "react-router-dom";
+import { Menu, Bell, Pencil, Share2, Trash2, Check, X } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import AnonAvatar from "@/components/AnonAvatar";
 import SettingsItem from "@/components/SettingsItem";
@@ -20,7 +21,40 @@ import {
 
 const Profile = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const { data } = await api.get('/api/user');
+      return data;
+    }
+  });
+
+  useEffect(() => {
+    if (user) {
+      setEditName(user.name);
+      setEditEmail(user.email);
+    }
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      await api.put('/api/user', { name: editName, email: editEmail });
+      await queryClient.invalidateQueries({ queryKey: ['user'] });
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Failed to update profile", error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -31,8 +65,7 @@ const Profile = () => {
     } finally {
         //Clear token from local storage
         localStorage.removeItem('token');
-        
-        window.location.href = '/login'; 
+        navigate('/auth');
     }
   };
 
@@ -44,6 +77,11 @@ const Profile = () => {
           <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
             <Menu className="h-5 w-5" />
           </button>
+          
+          <Link to="/">
+            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+          </Link>
+
           <button className="p-2 -mr-2 hover:bg-muted rounded-full transition-colors relative">
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
@@ -56,19 +94,47 @@ const Profile = () => {
         <div className="flex items-start gap-4">
           <AnonAvatar size="xl" />
           <div className="flex-1 pt-2">
-            <h1 className="text-2xl font-bold text-foreground">Username</h1>
-            <p className="text-muted-foreground">Anonymous User</p>
-            
-            <div className="flex gap-2 mt-3">
-              <Button variant="secondary" size="sm" className="gap-1.5">
-                <Pencil className="h-3.5 w-3.5" />
-                Edit Profile
-              </Button>
-              <Button variant="secondary" size="sm" className="gap-1.5">
-                <Share2 className="h-3.5 w-3.5" />
-                Share
-              </Button>
-            </div>
+            {!isEditing ? (
+              <>
+                <h1 className="text-2xl font-bold text-foreground">
+                  {isLoading ? "Loading..." : user?.name || "Anonymous User"}
+                </h1>
+                <p className="text-muted-foreground">{user?.email}</p>
+                <div className="flex gap-2 mt-3">
+                  <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => setIsEditing(true)}>
+                    <Pencil className="h-3.5 w-3.5" /> Edit Profile
+                  </Button>
+                  <Button variant="secondary" size="sm" className="gap-1.5">
+                    <Share2 className="h-3.5 w-3.5" /> Share
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <input 
+                  type="text" 
+                  value={editName} 
+                  onChange={e => setEditName(e.target.value)} 
+                  className="w-full bg-muted border border-border p-2 rounded text-foreground text-sm font-medium" 
+                  placeholder="Anonymous Name"
+                />
+                <input 
+                  type="email" 
+                  value={editEmail} 
+                  onChange={e => setEditEmail(e.target.value)} 
+                  className="w-full bg-muted border border-border p-2 rounded text-muted-foreground text-sm" 
+                  placeholder="Email alias"
+                />
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" onClick={handleSaveProfile} disabled={saving} className="gap-1 bg-primary text-primary-foreground">
+                    <Check className="h-4 w-4" /> Save
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setIsEditing(false)} disabled={saving} className="gap-1">
+                    <X className="h-4 w-4" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -52,9 +52,9 @@ class User extends Authenticatable
         ];
     }
 
-    public function messages()
+    public function comments()
     {
-        return $this->hasMany(Message::class);
+        return $this->hasMany(Comment::class);
     }
 
     public function posts()

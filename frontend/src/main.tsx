@@ -13,6 +13,8 @@ import ChatRoom from "@/pages/ChatRoom";
 import Forum from "@/pages/Forum";
 import Profile from "@/pages/Profile";
 import LandingPage from "@/pages/LandingPage";
+import CreatePost from "@/pages/CreatePost";
+import PostDetail from "@/pages/PostDetail";
 
 import "@/styles/index.css"; 
 
@@ -40,6 +42,8 @@ const App = () => (
 
           {/* After auth, Forum is first page user sees */}
           <Route path="/forum" element={<Forum />} />
+          <Route path="/posts/create" element={<CreatePost />} />
+          <Route path="/posts/:slug" element={<PostDetail />} />
 
           {/* Other routes */}
           <Route path="/chats" element={<Chats />} />
