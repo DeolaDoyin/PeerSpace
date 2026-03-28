@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/api/axios";
 import FloatingInput from "@/components/FloatingInput";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -14,6 +14,25 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingAlias, setIsLoadingAlias] = useState(false);
+
+  const fetchSuggestion = async () => {
+    setIsLoadingAlias(true);
+    try {
+      const { data } = await api.get('/api/auth/suggest-username');
+      setUsername(data);
+    } catch (e) {
+      console.error("Failed to fetch username suggestion");
+    } finally {
+      setIsLoadingAlias(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isLogin && !username) {
+      fetchSuggestion();
+    }
+  }, [isLogin]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -99,7 +118,9 @@ const Auth = () => {
       <div className="max-w-md w-full mx-auto space-y-8">
         {/* Logo area */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">PeerSpace</h1>
+          <a href="/">
+            <h1 className="text-3xl font-bold text-foreground">PeerSpace</h1>
+          </a>
           <p className="text-muted-foreground">
             Anonymous peer support for students
           </p>
@@ -112,13 +133,32 @@ const Auth = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <FloatingInput
-            label={isLogin ? "Username or Email" : "Username"}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            error={errors.username || errors.login}
-            autoComplete="username"
-          />
+          <div className="space-y-1">
+            <FloatingInput
+              label={isLogin ? "Username or Email" : "Choose your anonymous identity"}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              error={errors.username || errors.login}
+              autoComplete="username"
+              rightElement={
+                !isLogin ? (
+                  <button
+                    type="button"
+                    onClick={fetchSuggestion}
+                    className="text-muted-foreground hover:text-primary transition-colors focus:outline-none"
+                    title="Suggest another name"
+                  >
+                    <RefreshCw size={18} className={isLoadingAlias ? "animate-spin" : ""} />
+                  </button>
+                ) : null
+              }
+            />
+            {!isLogin && (
+              <p className="text-xs text-muted-foreground px-1">
+                This is how others will see you in PeerSpace. Use our suggestion or make your own!
+              </p>
+            )}
+          </div>
 
           {/* Email field only for registration */}
           {!isLogin && (

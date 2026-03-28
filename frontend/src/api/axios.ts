@@ -27,4 +27,18 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            // If they are not already on auth page, redirect them
+            if (window.location.pathname !== '/auth' && window.location.pathname !== '/') {
+                window.location.href = '/auth';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

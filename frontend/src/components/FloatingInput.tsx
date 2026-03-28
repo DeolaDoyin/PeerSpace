@@ -6,10 +6,11 @@ interface FloatingInputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
+  rightElement?: React.ReactNode;
 }
 
 const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
-  ({ label, error, type = "text", className, value, onChange, ...props }, ref) => {
+  ({ label, error, type = "text", className, value, onChange, rightElement, ...props }, ref) => {
     const [focused, setFocused] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     
@@ -56,6 +57,7 @@ const FloatingInput = forwardRef<HTMLInputElement, FloatingInputProps>(
           </label>
           
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            {rightElement}
             {hasValue && !isPassword && (
               <button
                 type="button"
