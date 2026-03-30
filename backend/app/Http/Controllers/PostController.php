@@ -71,8 +71,11 @@ class PostController extends Controller
 
     public function togglePin(Post $post): JsonResponse
     {
-        // Ideally, only moderators should do this
-        // $this->authorize('moderate', Post::class); 
+        // Explicit role check in addition to route middleware
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['admin', 'moderator'])) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
 
         $post->update([
             'is_pinned' => !$post->is_pinned
@@ -86,6 +89,7 @@ class PostController extends Controller
 
     public function destroy(Post $post): JsonResponse
     {
+        // Authorize the deletion via policy (owner or admin)
         $this->authorize('delete', $post);
 
         $post->delete();

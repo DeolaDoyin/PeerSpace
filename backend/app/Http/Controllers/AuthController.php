@@ -63,46 +63,52 @@ class AuthController extends Controller
 
     public function login(Request $request) 
 {
-    try {
-        // Log to see if we even get past validation
-        \Log::info("Starting validation...");
-        \DB::listen(function($query) {
-    \Log::info($query->sql);
-    \Log::info($query->bindings);
-});
-        
-        $request->validate([
-            'login' => 'required|string',
-            'password' => 'required|string',
-        ]);
+        try {
+            $request->validate([
+                'login' => 'required|string',
+                'password' => 'required|string',
+            ]);
 
-        \Log::info("Validation passed. Finding user...");
+            $loginValue = $request->input('login');
+            $field = filter_var($loginValue, FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
 
-        $loginValue = $request->input('login');
-        $field = filter_var($loginValue, FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+            $user = User::where($field, $loginValue)->first();
 
-        $user = User::where($field, $loginValue)->first();
+            if (!$user || !Hash::check($request->password, $user->password)) {
+                return response()->json(['message' => 'Invalid credentials'], 401);
+            }
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            return response()->json([
+                'user' => $user,
+                'token' => $token,
+            ]);
+
+        } catch (\Exception $e) {
+            // Log the exception server-side without exposing internals to clients
+            \Log::error('Login Error', ['exception' => $e]);
+            return response()->json(['message' => 'An internal error occurred.'], 500);
         }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'user' => $user,
-            'token' => $token,
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error("Login Error: " . $e->getMessage());
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
 }
 
     // 3. Logout
     public function logout(Request $request)
     {
+        $user = $request->user();
+
+        // Revoke the current access token if present (Sanctum)
+        try {
+            if ($user && method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
+                $user->currentAccessToken()->delete();
+            } elseif ($user && method_exists($user, 'tokens')) {
+                // Fallback: delete all tokens for the user
+                $user->tokens()->delete();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Failed to revoke token on logout', ['exception' => $e]);
+        }
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -123,5 +129,29 @@ class AuthController extends Controller
         $user->update($validated);
 
         return response()->json($user);
+    }
+
+    // 5. Promote a user to moderator or admin
+    public function promote(Request $request)
+    {
+        $request->validate([
+            'login' => 'required|string',
+            'role'  => 'required|in:admin,moderator,user',
+        ]);
+
+        $loginValue = $request->input('login');
+        $field = filter_var($loginValue, FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+
+        $user = User::where($field, $loginValue)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found. Check spelling.'], 404);
+        }
+
+        $user->update(['role' => $request->role]);
+
+        return response()->json([
+            'message' => "Successfully updated {$user->name} to {$request->role}!"
+        ]);
     }
 }

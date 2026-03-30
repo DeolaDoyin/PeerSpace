@@ -1,6 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import ChatListItem from "@/components/ChatListItem";
 import BottomNav from "@/components/BottomNav";
+import NotificationBell from "@/components/NotificationBell";
 
 // Mock data for demonstration
 const mockChats = [
@@ -60,11 +61,14 @@ const Chats = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10">
-        <Link to="/" className="inline-block">
-          <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-        </Link>
-        <p className="text-sm text-foreground font-medium mt-1">Chats</p>
+      <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex justify-between items-center">
+        <div>
+          <Link to="/" className="inline-block">
+            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+          </Link>
+          <p className="text-sm text-foreground font-medium mt-1">Chats</p>
+        </div>
+        <NotificationBell />
       </header>
 
       {/* Chat List */}

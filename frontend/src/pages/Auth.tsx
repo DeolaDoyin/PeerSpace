@@ -19,7 +19,7 @@ const Auth = () => {
   const fetchSuggestion = async () => {
     setIsLoadingAlias(true);
     try {
-      const { data } = await api.get('/api/auth/suggest-username');
+      const { data } = await api.get("/api/auth/suggest-username");
       setUsername(data);
     } catch (e) {
       console.error("Failed to fetch username suggestion");
@@ -36,7 +36,7 @@ const Auth = () => {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!username.trim()) {
       newErrors.username = "Username is required";
     } else if (username.length < 3) {
@@ -46,17 +46,17 @@ const Auth = () => {
     if (!isLogin && !email.includes("@")) {
       newErrors.email = "Please enter a valid email";
     }
-    
+
     if (!password) {
       newErrors.password = "Password is required";
     } else if (password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
     }
-    
+
     if (!isLogin && password !== confirmPassword) {
       newErrors.confirmPassword = "Passwords don't match";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -72,33 +72,32 @@ const Auth = () => {
     try {
       // Prepare the data
       const endpoint = isLogin ? "/api/login" : "/api/register";
-      const payload = isLogin 
-        ? { login: username, password } 
-        : { 
-            name: username, 
-            email, 
-            password, 
-            password_confirmation: confirmPassword 
+      const payload = isLogin
+        ? { login: username, password }
+        : {
+            name: username,
+            email,
+            password,
+            password_confirmation: confirmPassword,
           };
 
       // Initialize CSRF protection
-      await api.get('/sanctum/csrf-cookie');
+      await api.get("/sanctum/csrf-cookie");
 
       // Send the request with the token in the header
       const response = await api.post(endpoint, payload);
-      
-      console.log("Success:", response.data);
-      
+
       // Navigate on success
-      localStorage.setItem('token', response.data.token)
+      localStorage.setItem("token", response.data.token);
       navigate("/Forum");
-        } catch (err: any) {
+    } catch (err: any) {
       // Catch Errors
       if (err.response?.status === 422) {
         // Handle validation errors
         const serverErrors: any = {};
         Object.keys(err.response.data.errors).forEach((key) => {
-          serverErrors[key === 'name' ? 'username' : key] = err.response.data.errors[key][0];
+          serverErrors[key === "name" ? "username" : key] =
+            err.response.data.errors[key][0];
         });
         setErrors(serverErrors);
       } else if (err.response?.status === 401) {
@@ -135,7 +134,9 @@ const Auth = () => {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1">
             <FloatingInput
-              label={isLogin ? "Username or Email" : "Choose your anonymous identity"}
+              label={
+                isLogin ? "Username or Email" : "Choose your anonymous identity"
+              }
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               error={errors.username || errors.login}
@@ -148,14 +149,18 @@ const Auth = () => {
                     className="text-muted-foreground hover:text-primary transition-colors focus:outline-none"
                     title="Suggest another name"
                   >
-                    <RefreshCw size={18} className={isLoadingAlias ? "animate-spin" : ""} />
+                    <RefreshCw
+                      size={18}
+                      className={isLoadingAlias ? "animate-spin" : ""}
+                    />
                   </button>
                 ) : null
               }
             />
             {!isLogin && (
               <p className="text-xs text-muted-foreground px-1">
-                This is how others will see you in PeerSpace. Use our suggestion or make your own!
+                This is how others will see you in PeerSpace. Use our suggestion
+                or make your own!
               </p>
             )}
           </div>
@@ -171,7 +176,7 @@ const Auth = () => {
               autoComplete="email"
             />
           )}
-          
+
           <FloatingInput
             label="Enter Password"
             type="password"
@@ -180,7 +185,7 @@ const Auth = () => {
             error={errors.password}
             autoComplete={isLogin ? "current-password" : "new-password"}
           />
-          
+
           {!isLogin && (
             <FloatingInput
               label="Confirm Password"
@@ -199,15 +204,31 @@ const Auth = () => {
               className="text-sm text-muted-foreground hover:text-foreground"
             >
               {isLogin ? (
-                <>Don't have an account? <span className="underline font-medium">Sign Up</span></>
+                <>
+                  Don't have an account?{" "}
+                  <span className="underline font-medium">Sign Up</span>
+                </>
               ) : (
-                <>Already have an account, <span className="underline font-medium">Login</span></>
+                <>
+                  Already have an account,{" "}
+                  <span className="underline font-medium">Login</span>
+                </>
               )}
             </button>
           </div>
 
-          <Button type="submit" className="w-full h-12 text-base rounded-xl" disabled={isLoading}>
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (isLogin ? "Login" : "Sign Up")}
+          <Button
+            type="submit"
+            className="w-full h-12 text-base rounded-xl"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : isLogin ? (
+              "Login"
+            ) : (
+              "Sign Up"
+            )}
           </Button>
         </form>
 
@@ -215,7 +236,7 @@ const Auth = () => {
           <div className="text-center text-sm text-muted-foreground">
             Or sign up with
           </div>
-          
+
           <div className="flex justify-center gap-6">
             <button className="p-3 rounded-full hover:bg-muted transition-colors">
               <svg className="h-7 w-7" viewBox="0 0 24 24">
@@ -237,13 +258,13 @@ const Auth = () => {
                 />
               </svg>
             </button>
-            
+
             <button className="p-3 rounded-full hover:bg-muted transition-colors">
               <svg className="h-7 w-7" viewBox="0 0 24 24" fill="#1877F2">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
             </button>
-            
+
             <button className="p-3 rounded-full hover:bg-muted transition-colors">
               <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />

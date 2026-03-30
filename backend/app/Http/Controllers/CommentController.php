@@ -4,14 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Comment;
-use App\Notifications\NewCommentReceived;
+use App\Notifications\NewComment;
 use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
     public function index(Post $post)
     {
-        return $post->comments;
+        // Return comments in a paginated, predictable order with the user relation
+        return $post->comments()->with('user')->orderBy('created_at', 'asc')->paginate(20);
     }
 
     public function store(Request $request, Post $post)
@@ -32,7 +33,7 @@ class CommentController extends Controller
         
         // Don't notify the user about their own comment!
         if ($postOwner->id !== auth()->id()) {
-            $postOwner->notify(new NewCommentReceived($comment));
+            $postOwner->notify(new NewComment($post, auth()->user()));
         }
 
         return response()->json($comment->load('user'));

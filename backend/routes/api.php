@@ -14,7 +14,6 @@ use App\Services\RedditAliasService;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout']);
 
 Route::get('/auth/suggest-username', function () {
     return response(RedditAliasService::getNewAlias());
@@ -22,6 +21,7 @@ Route::get('/auth/suggest-username', function () {
 
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -30,7 +30,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Posts
     Route::get('posts', [PostController::class, 'index']);
     Route::get('posts/{post:slug}', [PostController::class, 'show'])->name('posts.show');
-    Route::resource('posts', PostController::class)->except(['index', 'show']); 
+    // Keep delete (destroy) restricted to moderators via explicit route below
+    Route::resource('posts', PostController::class)->except(['index', 'show', 'destroy']); 
 
     // Comments
     Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
@@ -44,6 +45,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/notifications', function () {
         return auth()->user()->unreadNotifications;
     });
+    
+    Route::post('/notifications/{id}/read', function ($id) {
+        $notification = auth()->user()->notifications()->find($id);
+        if ($notification) {
+            $notification->markAsRead();
+        }
+        return response()->json(['success' => true]);
+    });
+
+    Route::post('/notifications/mark-all-read', function () {
+        auth()->user()->unreadNotifications->markAsRead();
+        return response()->json(['success' => true]);
+    });
 
     // Like
     Route::post('/posts/{post}/like', [LikeController::class, 'togglePost']);
@@ -52,11 +66,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Admin routes
     Route::middleware(['admin'])->group(function () {
         Route::post('/categories', [CategoryController::class, 'store']);
+        Route::post('/users/promote', [AuthController::class, 'promote']);
     });
 
     // Moderator routes
     Route::middleware(['moderator'])->group(function () {
         Route::patch('/posts/{post}/pin', [PostController::class, 'togglePin']);
-        // Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+        Route::delete('/posts/{post}', [PostController::class, 'destroy']);
     });
 });
