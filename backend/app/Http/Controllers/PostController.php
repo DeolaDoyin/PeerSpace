@@ -44,11 +44,14 @@ class PostController extends Controller
     {
         $validated = $request->validate([
             'title'       => 'required|string|max:255',
-            'body'        => 'required|string',
+            'body'        => 'sometimes|string',
             'category_id' => 'required|exists:categories,id',
         ]);
 
-        $post = auth()->user()->posts()->create($validated);
+        // Ensure body exists (tests expect posts can be created without an explicit body)
+        $data = $validated + ['body' => $validated['body'] ?? ''];
+
+        $post = auth()->user()->posts()->create($data);
 
         // Load relations so the React frontend can display them immediately
         return response()->json($post->load('creator', 'category'), 201);

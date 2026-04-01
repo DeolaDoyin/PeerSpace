@@ -1,13 +1,12 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from '@/api/axios';
 import BottomNav from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import LikeButton from '@/components/LikeButton';
 import { MessageCircle, Loader2, AlertCircle, Plus, Pin, Trash2 } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
-import { formatDistanceToNow } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,7 +47,9 @@ interface PaginatedResponse {
     per_page: number;
     to: number;
     total: number;
-  }
+  };
+  current_page?: number;
+  last_page?: number;
 }
 
 const Forum = () => {
@@ -82,20 +83,23 @@ const Forum = () => {
   };
 
   // useInfiniteQuery
+  const FORUM_POLL_MS = 60_000;
+
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ['forum-posts', selectedCategory],
+    queryKey: ["forum-posts", selectedCategory],
     queryFn: fetchPosts,
     initialPageParam: 1,
-    getNextPageParam: (lastPage: any) => {
-      // Depending on if Laravel uses an API Resource or just a raw Paginator, the keys might be under "meta" or at the top level.
-      const current_page = lastPage.meta ? lastPage.meta.current_page : lastPage.current_page;
-      const last_page = lastPage.meta ? lastPage.meta.last_page : lastPage.last_page;
-      
-      return current_page < last_page 
-        ? current_page + 1 
-        : undefined;
+    getNextPageParam: (lastPage: PaginatedResponse) => {
+      const current_page = lastPage.meta?.current_page ?? lastPage.current_page ?? 1;
+      const last_page = lastPage.meta?.last_page ?? lastPage.last_page ?? 1;
+      return current_page < last_page ? current_page + 1 : undefined;
     },
     staleTime: 1000 * 60 * 5,
+    refetchInterval: () =>
+      typeof document !== "undefined" && document.visibilityState === "visible"
+        ? FORUM_POLL_MS
+        : false,
+    refetchOnWindowFocus: true,
   });
 
   const handlePin = async (id: number) => {

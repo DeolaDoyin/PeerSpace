@@ -2,17 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\CommentCreated;
 use App\Models\Post;
 use App\Models\Comment;
 use App\Notifications\NewComment;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
-    public function index(Post $post)
+    use AuthorizesRequests;
+
+    public function index(Request $request, Post $post)
     {
-        // Return comments in a paginated, predictable order with the user relation
-        return $post->comments()->with('user')->orderBy('created_at', 'asc')->paginate(20);
+        $query = $post->comments()->with('user')->orderBy('created_at', 'asc');
+
+        if ($request->filled('per_page')) {
+            $perPage = min(100, max(1, (int) $request->query('per_page')));
+
+            return $query->paginate($perPage);
+        }
+
+        return $query->get();
     }
 
     public function store(Request $request, Post $post)
@@ -36,7 +47,10 @@ class CommentController extends Controller
             $postOwner->notify(new NewComment($post, auth()->user()));
         }
 
-        return response()->json($comment->load('user'));
+        $comment->load('user');
+        broadcast(new CommentCreated($comment))->toOthers();
+
+        return response()->json($comment);
     }
 
     public function destroy(Comment $comment)

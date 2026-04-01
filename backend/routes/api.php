@@ -7,17 +7,18 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LikeController;
-use App\Services\NotificationService;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ChatMessageController;
 use App\Services\RedditAliasService;
 
-// Route::get('posts', [PostController::class, 'index']);
-
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::middleware(['throttle:auth'])->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 Route::get('/auth/suggest-username', function () {
     return response(RedditAliasService::getNewAlias());
-});
+})->middleware('throttle:suggest-alias');
 
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -31,11 +32,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('posts', [PostController::class, 'index']);
     Route::get('posts/{post:slug}', [PostController::class, 'show'])->name('posts.show');
     // Keep delete (destroy) restricted to moderators via explicit route below
-    Route::resource('posts', PostController::class)->except(['index', 'show', 'destroy']); 
+    Route::resource('posts', PostController::class)
+        ->except(['index', 'show', 'destroy'])
+        ->middleware('throttle:post-write');
 
     // Comments
     Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
-    Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comments');
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
 
     // Categories
     Route::get('/categories', [CategoryController::class, 'index']);
@@ -60,8 +64,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // Like
-    Route::post('/posts/{post}/like', [LikeController::class, 'togglePost']);
-    Route::post('/comments/{comment}/like', [LikeController::class, 'toggleComment']);
+    Route::post('/posts/{post}/like', [LikeController::class, 'togglePost'])->middleware('throttle:likes');
+    Route::post('/comments/{comment}/like', [LikeController::class, 'toggleComment'])->middleware('throttle:likes');
+
+    // Chats (direct messages)
+    Route::get('/chats', [ChatController::class, 'index']);
+    Route::post('/chats', [ChatController::class, 'store'])->middleware('throttle:chat-start');
+    Route::get('/chats/{chat}/messages', [ChatMessageController::class, 'index']);
+    Route::post('/chats/{chat}/messages', [ChatMessageController::class, 'store'])->middleware('throttle:chat-messages');
 
     // Admin routes
     Route::middleware(['admin'])->group(function () {

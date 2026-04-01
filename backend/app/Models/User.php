@@ -71,4 +71,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(Post::class);
     }
+
+    public function chats()
+    {
+        return $this->belongsToMany(Chat::class)
+            ->withPivot('last_read_at')
+            ->withTimestamps();
+    }
+
+    public function chatMessages()
+    {
+        return $this->hasMany(ChatMessage::class, 'user_id');
+    }
 }

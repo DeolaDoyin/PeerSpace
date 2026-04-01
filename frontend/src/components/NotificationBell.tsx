@@ -13,29 +13,45 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
+interface DbNotification {
+  id: string;
+  type?: string;
+  created_at: string;
+  data: {
+    type?: string;
+    message?: string;
+    post_slug?: string;
+  };
+}
+
+const POLL_MS = 45_000;
+
 const NotificationBell = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  const { data: notifications, isLoading } = useQuery({
-    queryKey: ['notifications'],
+  const { data: notifications, isLoading, refetch } = useQuery({
+    queryKey: ["notifications"],
     queryFn: async () => {
-      const { data } = await api.get('/api/notifications');
+      const { data } = await api.get<DbNotification[]>("/api/notifications");
       return data;
     },
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: () =>
+      typeof document !== "undefined" && document.visibilityState === "visible"
+        ? POLL_MS
+        : false,
+    refetchOnWindowFocus: true,
   });
 
   const unreadCount = notifications?.length || 0;
 
-  const handleRead = async (id: string, slug: string) => {
+  const handleRead = async (id: string, slug: string | undefined) => {
+    if (!slug) return;
     try {
-      // Mark as read aggressively in the background
       api.post(`/api/notifications/${id}/read`).then(() => {
-          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
       });
-      // Route the user instantly
       setIsOpen(false);
       navigate(`/posts/${slug}`);
     } catch (e) {
@@ -45,15 +61,21 @@ const NotificationBell = () => {
 
   const handleMarkAll = async () => {
     try {
-      await api.post('/api/notifications/mark-all-read');
-      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      await api.post("/api/notifications/mark-all-read");
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
     } catch (e) {
       console.error(e);
     }
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (open) void refetch();
+      }}
+    >
       <SheetTrigger asChild>
         <button className="p-2 -mr-2 hover:bg-muted rounded-full transition-colors relative">
           <Bell className="h-5 w-5 text-foreground" />
@@ -90,19 +112,25 @@ const NotificationBell = () => {
               <p className="text-sm">You're all caught up!</p>
             </div>
           ) : (
-            notifications?.map((notif: any) => (
+            notifications?.map((notif) => (
               <div 
                 key={notif.id} 
-                onClick={() => handleRead(notif.id, notif.data.post_slug)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter")
+                    void handleRead(notif.id, notif.data?.post_slug);
+                }}
+                onClick={() => void handleRead(notif.id, notif.data?.post_slug)}
                 className="p-3 bg-muted/50 hover:bg-muted rounded-lg border border-border cursor-pointer transition-colors"
               >
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    {notif.data.type === 'like' ? '❤️' : '💬'}
+                    {notif.data?.type === "like" ? "❤️" : "💬"}
                   </div>
                   <div>
                     <p className="text-xs text-foreground font-medium leading-tight">
-                      {notif.data.message}
+                      {notif.data?.message ?? "Notification"}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {new Date(notif.created_at).toLocaleDateString()}
