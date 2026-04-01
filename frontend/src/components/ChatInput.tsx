@@ -3,15 +3,16 @@ import { Plus, Smile, Search, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
-  onSend: (message: string) => void;
+  onSend: (message: string) => void | Promise<void>;
+  disabled?: boolean;
 }
 
-const ChatInput = ({ onSend }: ChatInputProps) => {
+const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
 
-  const handleSend = () => {
-    if (message.trim()) {
-      onSend(message.trim());
+  const handleSend = async () => {
+    if (message.trim() && !disabled) {
+      await onSend(message.trim());
       setMessage("");
     }
   };
@@ -19,7 +20,7 @@ const ChatInput = ({ onSend }: ChatInputProps) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   };
 
@@ -36,10 +37,11 @@ const ChatInput = ({ onSend }: ChatInputProps) => {
         <input
           type="text"
           value={message}
+          disabled={disabled}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          className="flex-1 bg-transparent outline-none text-sm"
+          className="flex-1 bg-transparent outline-none text-sm disabled:opacity-50"
         />
         <button className="ml-2 text-muted-foreground hover:text-foreground transition-colors">
           <Search className="h-4 w-4" />
@@ -47,8 +49,9 @@ const ChatInput = ({ onSend }: ChatInputProps) => {
       </div>
       
       <button
-        onClick={handleSend}
-        disabled={!message.trim()}
+        type="button"
+        onClick={() => void handleSend()}
+        disabled={disabled || !message.trim()}
         className={cn(
           "p-2 rounded-full transition-colors",
           message.trim()

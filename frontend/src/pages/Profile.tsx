@@ -2,8 +2,9 @@ import api from "@/api/axios";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Link } from "react-router-dom";
-import { Menu, Bell, Pencil, Share2, Trash2, Check, X } from "lucide-react";
+import { Menu, Pencil, Share2, Trash2, Check, X } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import NotificationBell from "@/components/NotificationBell";
 import AnonAvatar from "@/components/AnonAvatar";
 import SettingsItem from "@/components/SettingsItem";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,15 @@ const Profile = () => {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Admin Category State
+  const [catName, setCatName] = useState("");
+  const [catDesc, setCatDesc] = useState("");
+  const [creatingCat, setCreatingCat] = useState(false);
+
+  // Admin Promotion State
+  const [promoteLogin, setPromoteLogin] = useState("");
+  const [promoting, setPromoting] = useState(false);
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['user'],
@@ -56,6 +66,37 @@ const Profile = () => {
     }
   };
 
+  const handleCreateCategory = async () => {
+    if (!catName.trim()) return;
+    setCreatingCat(true);
+    try {
+      await api.post('/api/categories', { name: catName, description: catDesc });
+      setCatName("");
+      setCatDesc("");
+      await queryClient.invalidateQueries({ queryKey: ['categories'] });
+      alert("Category created successfully!");
+    } catch (error) {
+       console.error("Failed to create category", error);
+       alert("Failed to create category. Make sure the name is unique!");
+    } finally {
+      setCreatingCat(false);
+    }
+  };
+
+  const handlePromote = async (role: string) => {
+    if (!promoteLogin.trim()) return;
+    setPromoting(true);
+    try {
+      const res = await api.post('/api/users/promote', { login: promoteLogin, role });
+      alert(res.data.message);
+      setPromoteLogin("");
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Failed to promote user. Check the alias.");
+    } finally {
+      setPromoting(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
         // Tell Laravel to kill the session/token
@@ -82,10 +123,7 @@ const Profile = () => {
             <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
           </Link>
 
-          <button className="p-2 -mr-2 hover:bg-muted rounded-full transition-colors relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full" />
-          </button>
+          <NotificationBell />
         </div>
       </header>
 
@@ -138,6 +176,73 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* Admin Settings (Only visible to admins) */}
+      {user?.role === 'admin' && (
+        <div className="mt-4 bg-card">
+          <div className="px-4 py-3 border-b border-border">
+            <h2 className="text-sm font-medium text-destructive uppercase tracking-wide flex items-center gap-2">
+              Admin Gateway
+            </h2>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Launch New Space</label>
+              <input 
+                type="text" 
+                value={catName} 
+                onChange={e => setCatName(e.target.value)} 
+                className="w-full bg-muted border border-border p-2 rounded text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary" 
+                placeholder="Category Name (e.g. Health)"
+              />
+              <input 
+                type="text" 
+                value={catDesc} 
+                onChange={e => setCatDesc(e.target.value)} 
+                className="w-full bg-muted border border-border p-2 rounded text-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary" 
+                placeholder="Short Description"
+              />
+              <Button 
+                onClick={handleCreateCategory} 
+                disabled={creatingCat || !catName.trim()} 
+                className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 mt-2"
+              >
+                {creatingCat ? "Deploying space..." : "Create Category"}
+              </Button>
+            </div>
+
+            {/* Horizontal line separator */}
+            <div className="border-t border-border my-4"></div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Promote User</label>
+              <input 
+                type="text" 
+                value={promoteLogin} 
+                onChange={e => setPromoteLogin(e.target.value)} 
+                className="w-full bg-muted border border-border p-2 rounded text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary" 
+                placeholder="User Alias or Email"
+              />
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  onClick={() => handlePromote('moderator')} 
+                  disabled={promoting || !promoteLogin.trim()} 
+                  className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                >
+                  Make Moderator
+                </Button>
+                <Button 
+                  onClick={() => handlePromote('admin')} 
+                  disabled={promoting || !promoteLogin.trim()} 
+                  className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Make Admin
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings Section */}
       <div className="mt-4 bg-card">

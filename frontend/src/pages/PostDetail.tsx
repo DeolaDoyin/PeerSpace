@@ -1,38 +1,136 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/axios";
-import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
+import { getEcho } from "@/lib/echo";
+import { ArrowLeft, Loader2, MessageCircle, Trash2 } from "lucide-react";
 import LikeButton from "@/components/LikeButton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from "date-fns";
+
+interface CommentRow {
+  id: number;
+  content: string;
+  user_id: number;
+  user?: { id: number; name: string };
+  created_at?: string;
+  likes_count?: number;
+  is_liked?: boolean;
+}
+
+interface CommentCreatedPayload {
+  comment: {
+    id: number;
+    post_id: number;
+    content: string;
+    created_at?: string;
+    user: { id: number; name: string };
+  };
+}
+
+interface PostCacheRow {
+  comments_count?: number;
+  [key: string]: unknown;
+}
 
 const PostDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch Post
+  const { data: user } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/user");
+      return data;
+    },
+  });
+
   const { data: post, isLoading, error, refetch } = useQuery({
-    queryKey: ['post', slug],
+    queryKey: ["post", slug],
     queryFn: async () => {
       const { data } = await api.get(`/api/posts/${slug}`);
       return data;
-    }
+    },
   });
 
-  // Submit Comment
+  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: ["post-comments", post?.id],
+    queryFn: async () => {
+      const { data } = await api.get(`/api/posts/${post!.id}/comments`);
+      return Array.isArray(data) ? data : data.data;
+    },
+    enabled: !!post?.id,
+  });
+
+  useEffect(() => {
+    const postId = post?.id;
+    const slugKey = slug;
+    if (!postId || !slugKey || !user?.id) {
+      return;
+    }
+
+    const echo = getEcho();
+    if (!echo) {
+      return;
+    }
+
+    const room = `post.${postId}`;
+    const channel = echo.join(room);
+
+    channel.listen(".comment.created", (payload: CommentCreatedPayload) => {
+      const row = payload.comment;
+      const next: CommentRow = {
+        id: row.id,
+        content: row.content,
+        user_id: row.user.id,
+        user: row.user,
+        created_at: row.created_at,
+        likes_count: 0,
+        is_liked: false,
+      };
+
+      queryClient.setQueryData<CommentRow[]>(
+        ["post-comments", postId],
+        (prev) => {
+          const list = prev ?? [];
+          if (list.some((c) => c.id === next.id)) {
+            return list;
+          }
+          return [...list, next];
+        }
+      );
+
+      queryClient.setQueryData<PostCacheRow>(["post", slugKey], (prev) =>
+        prev
+          ? {
+              ...prev,
+              comments_count: (prev.comments_count ?? 0) + 1,
+            }
+          : prev
+      );
+
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    });
+
+    return () => {
+      echo.leave(room);
+    };
+  }, [post?.id, slug, user?.id, queryClient]);
+
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!comment.trim()) return;
+    if (!comment.trim() || !post?.id) return;
 
     setSubmitting(true);
     try {
-      await api.post(`/api/posts/${post.id}/comments`, { body: comment });
+      await api.post(`/api/posts/${post.id}/comments`, { content: comment });
       setComment("");
-      refetch(); // Reload post to show new comment
+      await queryClient.invalidateQueries({ queryKey: ["post-comments", post.id] });
+      await queryClient.invalidateQueries({ queryKey: ["post", slug] });
     } catch (err) {
       console.error("Failed to post comment");
     } finally {
@@ -40,13 +138,44 @@ const PostDetail = () => {
     }
   };
 
-  if (isLoading) return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><Loader2 className="animate-spin text-primary w-8 h-8" /></div>;
-  if (error || !post) return <div className="p-8 text-center text-destructive">Failed to load post. <button onClick={() => refetch()} className="underline">Retry</button></div>;
+  const handleDeleteComment = async (commentId: number) => {
+    if (!post?.id) return;
+    try {
+      await api.delete(`/api/comments/${commentId}`);
+      await queryClient.invalidateQueries({ queryKey: ["post-comments", post.id] });
+      await queryClient.invalidateQueries({ queryKey: ["post", slug] });
+    } catch (err) {
+      console.error("Failed to delete comment");
+    }
+  };
+
+  const canDeleteComment = (c: CommentRow) => {
+    if (!user?.id) return false;
+    if (c.user_id === user.id) return true;
+    if (user.role === "admin" || user.role === "moderator") return true;
+    return false;
+  };
+
+  if (isLoading)
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <Loader2 className="animate-spin text-primary w-8 h-8" />
+      </div>
+    );
+  if (error || !post)
+    return (
+      <div className="p-8 text-center text-destructive">
+        Failed to load post.{" "}
+        <button type="button" onClick={() => refetch()} className="underline">
+          Retry
+        </button>
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1 text-muted-foreground hover:text-foreground">
+        <button type="button" onClick={() => navigate(-1)} className="p-1 text-muted-foreground hover:text-foreground">
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-xl font-semibold text-foreground">Support Post</h1>
@@ -55,21 +184,24 @@ const PostDetail = () => {
       <main className="p-4 max-w-2xl mx-auto space-y-6">
         <Card className="p-5 border-border">
           <h2 className="text-xl font-bold text-foreground mb-2">
-            {Boolean(post.is_pinned) && "📌 "}{post.title}
+            {Boolean(post.is_pinned) && "📌 "}
+            {post.title}
           </h2>
           <div className="flex gap-2 text-xs text-muted-foreground mb-4">
-            <span className="text-primary font-medium">by {post.creator?.name || 'Anonymous'}</span>
+            <span className="text-primary font-medium">by {post.creator?.name || "Anonymous"}</span>
             <span>•</span>
-            <span>{post.created_at ? formatDistanceToNow(new Date(post.created_at)) + " ago" : "Recently"}</span>
+            <span>
+              {post.created_at ? formatDistanceToNow(new Date(post.created_at)) + " ago" : "Recently"}
+            </span>
           </div>
           <p className="text-foreground whitespace-pre-wrap mb-4">{post.body}</p>
-          
+
           <div className="flex items-center gap-4 text-xs text-muted-foreground pt-4 border-t border-border">
-            <LikeButton 
-              itemId={post.id} 
-              type="post" 
-              initialCount={post.likes_count ?? 0} 
-              initialIsLiked={post.is_liked ?? false} 
+            <LikeButton
+              itemId={post.id}
+              type="post"
+              initialCount={post.likes_count ?? 0}
+              initialIsLiked={post.is_liked ?? false}
             />
             <span className="flex items-center gap-1">
               <MessageCircle className="h-4 w-4" /> {post.comments_count ?? 0}
@@ -77,7 +209,6 @@ const PostDetail = () => {
           </div>
         </Card>
 
-        {/* Comment Form */}
         <form onSubmit={handleCommentSubmit} className="space-y-3">
           <textarea
             value={comment}
@@ -93,29 +224,48 @@ const PostDetail = () => {
           </div>
         </form>
 
-        {/* Comments List */}
         <div className="space-y-4">
-          <h3 className="font-semibold text-foreground">Comments ({post.comments?.length || 0})</h3>
-          {post.comments?.map((c: any) => (
+          <h3 className="font-semibold text-foreground">Comments ({comments.length})</h3>
+          {commentsLoading && (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {!commentsLoading &&
+            (comments as CommentRow[]).map((c) => (
             <Card key={c.id} className="p-4 border-border bg-card/50">
-              <div className="flex gap-2 text-xs text-muted-foreground mb-2">
-                <span className="text-primary font-medium">{c.creator?.name || 'Anonymous'}</span>
-                <span>•</span>
-                <span>{c.created_at ? formatDistanceToNow(new Date(c.created_at)) + " ago" : ""}</span>
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex gap-2 text-xs text-muted-foreground mb-2">
+                  <span className="text-primary font-medium">{c.user?.name || "Anonymous"}</span>
+                  <span>•</span>
+                  <span>{c.created_at ? formatDistanceToNow(new Date(c.created_at)) + " ago" : ""}</span>
+                </div>
+                {canDeleteComment(c) && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteComment(c.id)}
+                    className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                    aria-label="Delete comment"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
-              <p className="text-sm text-foreground mb-3">{c.body}</p>
+              <p className="text-sm text-foreground mb-3 whitespace-pre-wrap">{c.content}</p>
               <div className="flex justify-end border-t border-border pt-2 mt-2">
-                <LikeButton 
-                  itemId={c.id} 
-                  type="comment" 
-                  initialCount={c.likes_count ?? 0} 
-                  initialIsLiked={c.is_liked ?? false} 
+                <LikeButton
+                  itemId={c.id}
+                  type="comment"
+                  initialCount={c.likes_count ?? 0}
+                  initialIsLiked={c.is_liked ?? false}
                 />
               </div>
             </Card>
           ))}
-          {!post.comments?.length && (
-            <p className="text-sm text-muted-foreground italic text-center py-4">Be the first to share your thoughts.</p>
+          {!commentsLoading && !(comments as CommentRow[]).length && (
+            <p className="text-sm text-muted-foreground italic text-center py-4">
+              Be the first to share your thoughts.
+            </p>
           )}
         </div>
       </main>

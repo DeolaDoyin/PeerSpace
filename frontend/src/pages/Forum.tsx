@@ -1,12 +1,23 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from '@/api/axios';
 import BottomNav from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import LikeButton from '@/components/LikeButton';
-import { MessageCircle, Loader2, AlertCircle, Plus } from "lucide-react";
-import { formatDistanceToNow } from 'date-fns';
+import { MessageCircle, Loader2, AlertCircle, Plus, Pin, Trash2 } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Post {
   id: number;
@@ -36,11 +47,23 @@ interface PaginatedResponse {
     per_page: number;
     to: number;
     total: number;
-  }
+  };
+  current_page?: number;
+  last_page?: number;
 }
 
 const Forum = () => {
+  const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string | number>("All");
+
+  // Fetch Current User for Roles
+  const { data: user } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const { data } = await api.get('/api/user');
+      return data;
+    }
+  });
 
   // Fetch categories
   const { data: categories } = useQuery({
@@ -60,21 +83,42 @@ const Forum = () => {
   };
 
   // useInfiniteQuery
+  const FORUM_POLL_MS = 60_000;
+
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ['forum-posts', selectedCategory],
+    queryKey: ["forum-posts", selectedCategory],
     queryFn: fetchPosts,
     initialPageParam: 1,
-    getNextPageParam: (lastPage: any) => {
-      // Depending on if Laravel uses an API Resource or just a raw Paginator, the keys might be under "meta" or at the top level.
-      const current_page = lastPage.meta ? lastPage.meta.current_page : lastPage.current_page;
-      const last_page = lastPage.meta ? lastPage.meta.last_page : lastPage.last_page;
-      
-      return current_page < last_page 
-        ? current_page + 1 
-        : undefined;
+    getNextPageParam: (lastPage: PaginatedResponse) => {
+      const current_page = lastPage.meta?.current_page ?? lastPage.current_page ?? 1;
+      const last_page = lastPage.meta?.last_page ?? lastPage.last_page ?? 1;
+      return current_page < last_page ? current_page + 1 : undefined;
     },
     staleTime: 1000 * 60 * 5,
+    refetchInterval: () =>
+      typeof document !== "undefined" && document.visibilityState === "visible"
+        ? FORUM_POLL_MS
+        : false,
+    refetchOnWindowFocus: true,
   });
+
+  const handlePin = async (id: number) => {
+    try {
+      await api.patch(`/api/posts/${id}/pin`);
+      await queryClient.invalidateQueries({ queryKey: ['forum-posts'] });
+    } catch (e) {
+      console.error("Failed to pin", e);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await api.delete(`/api/posts/${id}`);
+      await queryClient.invalidateQueries({ queryKey: ['forum-posts'] });
+    } catch (e) {
+      console.error("Failed to delete", e);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -85,10 +129,12 @@ const Forum = () => {
           </Link>
           <p className="text-sm text-foreground font-medium mt-1">Forum</p>
         </div>
-        {/* Bonus: Refresh button */}
-        <button onClick={() => refetch()} className="text-xs text-primary font-medium">
-          Refresh
-        </button>
+        <div className="flex items-center gap-4">
+          <button onClick={() => refetch()} className="text-xs text-primary font-medium">
+            Refresh
+          </button>
+          <NotificationBell />
+        </div>
       </header>
 
       {/* Category Pills */}
@@ -155,19 +201,47 @@ const Forum = () => {
                   <h3 className="font-semibold text-foreground mb-1">
                     {Boolean(post.is_pinned) && "📌 "}{post.title}
                   </h3>
-                  {/* <p className="text-xs text-primary mb-2">by {post.name}</p> */}
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{post.body}</p> 
                 </Link>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                  <span className="flex items-center gap-1">
-                    <MessageCircle className="h-4 w-4" /> {post.comments_count ?? 0}
-                  </span>
-                  <LikeButton 
-                    itemId={post.id} 
-                    type="post" 
-                    initialCount={post.likes_count ?? 0} 
-                    initialIsLiked={post.is_liked ?? false} 
-                  />
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <MessageCircle className="h-4 w-4" /> {post.comments_count ?? 0}
+                    </span>
+                    <LikeButton 
+                      itemId={post.id} 
+                      type="post" 
+                      initialCount={post.likes_count ?? 0} 
+                      initialIsLiked={post.is_liked ?? false} 
+                    />
+                  </div>
+
+                  {(user?.role === 'admin' || user?.role === 'moderator') && (
+                    <div className="flex items-center gap-2">
+                      <button onClick={(e) => { e.preventDefault(); handlePin(post.id); }} className="text-muted-foreground hover:text-primary p-2 -my-2 rounded-full transition-colors">
+                        <Pin className="h-4 w-4" />
+                      </button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button className="text-muted-foreground hover:text-destructive p-2 -my-2 rounded-full transition-colors">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="max-w-xs sm:max-w-md">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the post and all associated comments safely.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(post.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}

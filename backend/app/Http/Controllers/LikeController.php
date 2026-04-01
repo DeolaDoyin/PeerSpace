@@ -3,12 +3,21 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Post;
+use App\Models\Comment;
 
 class LikeController extends Controller
 {
     public function togglePost(Post $post)
     {
-        return $this->toggle($post);
+        $response = $this->toggle($post);
+        $data = $response->getData();
+        
+        if ($data->liked && $post->user_id !== auth()->id()) {
+            $post->creator->notify(new \App\Notifications\PostLiked($post, auth()->user()));
+        }
+
+        return $response;
     }
 
     public function toggleComment(Comment $comment)

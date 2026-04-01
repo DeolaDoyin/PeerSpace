@@ -13,7 +13,8 @@ class PostPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        // Allow viewing the feed by default; restrict writes via create/update/delete
+        return true;
     }
 
     /**
@@ -21,7 +22,7 @@ class PostPolicy
      */
     public function view(User $user, Post $post): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -29,7 +30,8 @@ class PostPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        // Any authenticated user may create a post
+        return true;
     }
 
     /**
@@ -45,7 +47,8 @@ class PostPolicy
      */
     public function delete(User $user, Post $post): bool
     {
-        return $user->id === $post->user_id || $user->is_admin;
+        // Allow owner or admins (role-based). The User model exposes role string.
+        return $user->id === $post->user_id || ($user->role === 'admin');
     }
 
     /**
