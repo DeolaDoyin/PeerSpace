@@ -1,5 +1,5 @@
 // src/components/landing/Navbar.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {Heart, Menu, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -15,12 +15,24 @@ const navLinks = [
 
 
 const Navbar = () => {
-  const [darkMode, setDarkMode] = useState(false);
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle("dark");
-  };
+  // --- Theme Logic ---
+    const [theme, setTheme] = useState(() => {
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem("theme") || "light";
+      }
+      return "light";
+    });
+  
+    const toggleTheme = () => {
+      const newTheme = theme === "light" ? "dark" : "light";
+      document.documentElement.classList.toggle("dark", newTheme === "dark");
+      localStorage.setItem("theme", newTheme);
+      setTheme(newTheme);
+    };
+  
+    useEffect(() => {
+      document.documentElement.classList.toggle("dark", theme === "dark");
+    }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
@@ -47,12 +59,15 @@ const Navbar = () => {
         {/* Right side: Dark mode + Sign In + Mobile menu */}
         <div className="flex items-center gap-2">
           {/* Dark mode toggle */}
-          <button
-            onClick={toggleDarkMode}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Toggle Theme"
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+          </div>
 
           {/* Sign In button */}
           <a href="/auth">

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from '@/api/axios';
+import { Sun, Moon } from 'lucide-react';
 import BottomNav from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import LikeButton from '@/components/LikeButton';
@@ -82,6 +83,27 @@ const Forum = () => {
     return data;
   };
 
+
+  // --- Theme Logic ---
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("theme") || "light";
+    }
+    return "light";
+  });
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("theme", newTheme);
+    setTheme(newTheme);
+  };
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, []);
+
+
   // useInfiniteQuery
   const FORUM_POLL_MS = 60_000;
 
@@ -133,7 +155,17 @@ const Forum = () => {
           <button onClick={() => refetch()} className="text-xs text-primary font-medium">
             Refresh
           </button>
-          <NotificationBell />
+         
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Toggle Theme"
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+            <NotificationBell />
+          </div>
         </div>
       </header>
 
