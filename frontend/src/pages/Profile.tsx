@@ -122,17 +122,23 @@ const Profile = () => {
   };
 
   const handleLogout = async () => {
-    try {
-        // Tell Laravel to kill the session/token
-        await api.post('/api/logout');
-    } catch (error) {
-        console.error("Server logout failed", error);
-    } finally {
-        //Clear token from local storage
-        localStorage.removeItem('token');
-        navigate('/auth');
-    }
-  };
+  try {
+    // 1. Tell the server to invalidate the session
+    await api.post('/api/logout');
+  } catch (error) {
+    console.error("Server logout failed", error);
+  } finally {
+    // 2. Clear the token from storage
+    localStorage.removeItem('token');
+
+    // 3. CRITICAL: Wipe the React Query cache
+    // This forces the Navbar and other components to re-check auth
+    queryClient.clear(); 
+
+    // 4. Redirect
+    navigate('/auth');
+  }
+};
 
   return (
     <div className="min-h-screen bg-background pb-20 transition-colors duration-300">
