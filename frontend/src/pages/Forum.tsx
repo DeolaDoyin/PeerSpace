@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from '@/api/axios';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Flag } from 'lucide-react';
 import BottomNav from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import LikeButton from '@/components/LikeButton';
@@ -142,6 +142,17 @@ const Forum = () => {
     }
   };
 
+const handleReport = async (postId: number) => {
+  try {
+    // Replace with your actual report endpoint
+    await api.post(`/api/posts/${postId}/report`);
+    alert("Post reported to moderators. Thank you for keeping PeerSpace safe.");
+  } catch (e) {
+    console.error("Failed to report", e);
+    alert("Failed to send report. Please try again later.");
+  }
+};
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex justify-between items-center">
@@ -237,15 +248,45 @@ const Forum = () => {
                 </Link>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    {/* Comments count */}
                     <span className="flex items-center gap-1">
                       <MessageCircle className="h-4 w-4" /> {post.comments_count ?? 0}
                     </span>
+
+                    {/* Like Button */}
                     <LikeButton 
                       itemId={post.id} 
                       type="post" 
                       initialCount={post.likes_count ?? 0} 
                       initialIsLiked={post.is_liked ?? false} 
                     />
+
+                    {/* --- NEW: Report Button --- */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="flex items-center gap-1 hover:text-destructive transition-colors">
+                          <Flag className="h-4 w-4" /> Report
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="max-w-xs sm:max-w-md">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Report this post?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Is this post violating our community guidelines? Our moderators will review it shortly. 
+                            This action is anonymous.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleReport(post.id)} 
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Report
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
 
                   {(user?.role === 'admin' || user?.role === 'moderator') && (
