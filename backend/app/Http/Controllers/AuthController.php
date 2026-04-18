@@ -78,6 +78,10 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Invalid credentials'], 401);
             }
 
+            if ($user->account_status !== 'active') {
+                return response()->json(['message' => 'Your account has been suspended.'], 403);
+            }
+
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([
