@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from '@/api/axios';
 import BottomNav from "@/components/BottomNav";
+import AppHeader from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
 import LikeButton from '@/components/LikeButton';
 import { MessageCircle, Loader2, AlertCircle, Plus, Pin, Trash2 } from "lucide-react";
-import NotificationBell from "@/components/NotificationBell";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -122,20 +122,7 @@ const Forum = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex justify-between items-center">
-        <div>
-          <Link to="/" className="inline-block">
-            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-          </Link>
-          <p className="text-sm text-foreground font-medium mt-1">Forum</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <button onClick={() => refetch()} className="text-xs text-primary font-medium">
-            Refresh
-          </button>
-          <NotificationBell />
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Category Pills */}
       <div className="px-4 py-3 border-b border-border bg-card overflow-x-auto whitespace-nowrap hide-scrollbar">
