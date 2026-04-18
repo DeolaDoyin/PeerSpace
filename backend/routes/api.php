@@ -9,6 +9,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatMessageController;
+use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\ReportController;
 use App\Services\RedditAliasService;
 
 Route::middleware(['throttle:auth'])->group(function () {
@@ -63,6 +65,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return response()->json(['success' => true]);
     });
 
+    // Reports (User)
+    Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:post-write');
+
     // Like
     Route::post('/posts/{post}/like', [LikeController::class, 'togglePost'])->middleware('throttle:likes');
     Route::post('/comments/{comment}/like', [LikeController::class, 'toggleComment'])->middleware('throttle:likes');
@@ -83,5 +88,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['moderator'])->group(function () {
         Route::patch('/posts/{post}/pin', [PostController::class, 'togglePin']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+        Route::post('/users/{user}/suspend', [ModerationController::class, 'suspendUser']);
+        Route::get('/reports', [ReportController::class, 'index']);
+        Route::patch('/reports/{report}/resolve', [ReportController::class, 'resolve']);
     });
 });
