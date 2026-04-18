@@ -1,10 +1,10 @@
 import api from "@/api/axios";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, Link } from "react-router-dom";
-import { Menu, Pencil, Share2, Trash2, Check, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Pencil, Share2, Trash2, Check, X } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import NotificationBell from "@/components/NotificationBell";
+import AppHeader from "@/components/AppHeader";
 import AnonAvatar from "@/components/AnonAvatar";
 import SettingsItem from "@/components/SettingsItem";
 import { Button } from "@/components/ui/button";
@@ -112,20 +112,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
-        <div className="flex items-center justify-between">
-          <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
-            <Menu className="h-5 w-5" />
-          </button>
-          
-          <Link to="/">
-            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-          </Link>
-
-          <NotificationBell />
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Profile Card */}
       <div className="px-4 py-6 bg-card">
