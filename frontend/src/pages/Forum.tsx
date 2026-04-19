@@ -4,7 +4,7 @@ import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-quer
 import api from '@/api/axios';
 import { Sun, Moon, Flag } from 'lucide-react';
 import BottomNav from "@/components/BottomNav";
-import AppHeader from "@/components/AppHeader";
+import NotificationBell from "@/components/NotificationBell";
 import { Card } from "@/components/ui/card";
 import LikeButton from '@/components/LikeButton';
 import { MessageCircle, Loader2, AlertCircle, Plus, Pin, Trash2 } from "lucide-react";
