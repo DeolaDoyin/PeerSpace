@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from '@/api/axios';
+import { Sun, Moon, Flag } from 'lucide-react';
 import BottomNav from "@/components/BottomNav";
 import AppHeader from "@/components/AppHeader";
 import { Card } from "@/components/ui/card";
@@ -82,6 +83,27 @@ const Forum = () => {
     return data;
   };
 
+
+  // --- Theme Logic ---
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("theme") || "light";
+    }
+    return "light";
+  });
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("theme", newTheme);
+    setTheme(newTheme);
+  };
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, []);
+
+
   // useInfiniteQuery
   const FORUM_POLL_MS = 60_000;
 
@@ -120,9 +142,43 @@ const Forum = () => {
     }
   };
 
+const handleReport = async (postId: number) => {
+  try {
+    // Replace with your actual report endpoint
+    await api.post(`/api/posts/${postId}/report`);
+    alert("Post reported to moderators. Thank you for keeping PeerSpace safe.");
+  } catch (e) {
+    console.error("Failed to report", e);
+    alert("Failed to send report. Please try again later.");
+  }
+};
+
   return (
     <div className="min-h-screen bg-background pb-20">
-      <AppHeader />
+      <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex justify-between items-center">
+        <div>
+          <Link to="/" className="inline-block">
+            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+          </Link>
+          <p className="text-sm text-foreground font-medium mt-1">Forum</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <button onClick={() => refetch()} className="text-xs text-primary font-medium">
+            Refresh
+          </button>
+         
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Toggle Theme"
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+            <NotificationBell />
+          </div>
+        </div>
+      </header>
 
       {/* Category Pills */}
       <div className="px-4 py-3 border-b border-border bg-card overflow-x-auto whitespace-nowrap hide-scrollbar">
@@ -192,15 +248,45 @@ const Forum = () => {
                 </Link>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    {/* Comments count */}
                     <span className="flex items-center gap-1">
                       <MessageCircle className="h-4 w-4" /> {post.comments_count ?? 0}
                     </span>
+
+                    {/* Like Button */}
                     <LikeButton 
                       itemId={post.id} 
                       type="post" 
                       initialCount={post.likes_count ?? 0} 
                       initialIsLiked={post.is_liked ?? false} 
                     />
+
+                    {/* --- NEW: Report Button --- */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="flex items-center gap-1 hover:text-destructive transition-colors">
+                          <Flag className="h-4 w-4" /> Report
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="max-w-xs sm:max-w-md">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Report this post?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Is this post violating our community guidelines? Our moderators will review it shortly. 
+                            This action is anonymous.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleReport(post.id)} 
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Report
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
 
                   {(user?.role === 'admin' || user?.role === 'moderator') && (

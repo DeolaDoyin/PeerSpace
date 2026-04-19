@@ -1,36 +1,60 @@
-// src/components/landing/Navbar.tsx
-import { useState } from "react";
-import {Heart, Menu, Moon, Sun } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Heart, Menu, Moon, Sun, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-
-// Import your LogoHeart component
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import api from "@/api/axios";
 
 const navLinks = [
   { label: "How It Works", href: "#how-it-works" },
   { label: "Community", href: "#community" },
-  { label: "Share", href: "#share" },
   { label: "Resources", href: "#resources" },
 ];
 
-
-
 const Navbar = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  // --- Auth Check ---
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      try {
+        const { data } = await api.get('/api/user');
+        return data;
+      } catch {
+        return null;
+      }
+    },
+    retry: false,
+  });
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle("dark");
+  // --- Theme Logic ---
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("theme") || "light";
+    }
+    return "light";
+  });
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("theme", newTheme);
+    setTheme(newTheme);
   };
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        
         {/* Logo */}
-        <a href="#" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <Heart className="h-6 w-6 text-primary fill-primary/20" />
           <span className="text-xl font-bold text-foreground">PeerSpace</span>
-        </a>
+        </Link>
 
         {/* Desktop nav links */}
         <nav className="hidden items-center gap-1 md:flex">
@@ -45,22 +69,32 @@ const Navbar = () => {
           ))}
         </nav>
 
-        {/* Right side: Dark mode + Sign In + Mobile menu */}
+        {/* Right side controls */}
         <div className="flex items-center gap-2">
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleDarkMode}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          <button 
+            onClick={toggleTheme}
+            className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Toggle Theme"
           >
-            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </button>
 
-          {/* Sign In button */}
-          <a href="/auth">
-            <Button size="sm" variant="default" className="hidden sm:inline-flex">
-              Sign In
-            </Button>
-          </a>
+          {/* Dynamic Desktop Button */}
+          {!isLoading && (
+            user ? (
+              <Link to="/profile" className="hidden sm:inline-flex">
+                <Button size="sm" variant="outline" className="gap-2">
+                  <UserCircle className="h-4 w-4" /> My Profile
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/auth" className="hidden sm:inline-flex">
+                <Button size="sm" variant="default">
+                  Sign In
+                </Button>
+              </Link>
+            )
+          )}
 
           {/* Mobile menu */}
           <Sheet>
@@ -80,11 +114,22 @@ const Navbar = () => {
                     {link.label}
                   </a>
                 ))}
-                <a href="/auth">
-                  <Button size="default" variant="default" className="mt-4 w-full">
-                    Sign In
-                  </Button>
-                </a>
+                
+                {!isLoading && (
+                  user ? (
+                    <Link to="/profile" className="mt-4">
+                      <Button size="default" variant="outline" className="w-full gap-2">
+                        <UserCircle className="h-4 w-4" /> Go to Profile
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link to="/auth" className="mt-4">
+                      <Button size="default" variant="default" className="w-full">
+                        Sign In
+                      </Button>
+                    </Link>
+                  )
+                )}
               </div>
             </SheetContent>
           </Sheet>

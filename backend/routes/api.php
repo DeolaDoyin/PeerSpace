@@ -36,6 +36,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->except(['index', 'show', 'destroy'])
         ->middleware('throttle:post-write');
 
+    // Ensure this is inside your auth middleware group if reporting requires login
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/posts/{post}/report', [PostController::class, 'report']);
+    });
+
     // Comments
     Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comments');
