@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, Link } from "react-router-dom";
 import { Menu, Pencil, Share2, Trash2, Check, X, Sun, Moon } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import NotificationBell from "@/components/NotificationBell";
+import AppHeader from "@/components/AppHeader";
 import AnonAvatar from "@/components/AnonAvatar";
 import SettingsItem from "@/components/SettingsItem";
 import { Button } from "@/components/ui/button";

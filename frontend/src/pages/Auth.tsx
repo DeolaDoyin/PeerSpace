@@ -5,6 +5,8 @@ import FloatingInput from "@/components/FloatingInput";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, Sun, Moon } from "lucide-react"; // Added Sun/Moon
 
+import AppHeader from "@/components/AppHeader";
+
 const Auth = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(false);
@@ -100,6 +102,11 @@ const Auth = () => {
       </div>
 
       <div className="max-w-md w-full mx-auto space-y-8">
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppHeader />
+      <div className="flex-1 flex flex-col justify-center px-6 py-12">
+        <div className="max-w-md w-full mx-auto space-y-8">
+        {/* Logo area */}
         <div className="text-center space-y-2">
           <a href="/">
             <h1 className="text-3xl font-bold text-foreground">PeerSpace</h1>
@@ -197,6 +204,7 @@ const Auth = () => {
              <SocialButton icon="apple" />
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
