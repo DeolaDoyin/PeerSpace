@@ -1,6 +1,7 @@
 import { MessageCircle, Users, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "react-router-dom";
+
 const navItems = [
   { to: "/chats", icon: MessageCircle, label: "Chats" },
   { to: "/forum", icon: Users, label: "Forum" },
