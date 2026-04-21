@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
+import { Sun, Moon } from 'lucide-react';
 import api from "@/api/axios";
 import ChatListItem from "@/components/ChatListItem";
 import BottomNav from "@/components/BottomNav";
@@ -45,6 +46,26 @@ const Chats = () => {
         : false,
     refetchOnWindowFocus: true,
   });
+  
+// --- Theme Logic ---
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("theme") || "light";
+    }
+    return "light";
+  });
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("theme", newTheme);
+    setTheme(newTheme);
+  };
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, []);
+
 
   const previewText = (chat: ChatListRow) => {
     if (chat.last_message?.body) {
@@ -91,7 +112,17 @@ const Chats = () => {
           </Link>
           <p className="text-sm text-foreground font-medium mt-1">Chats</p>
         </div>
-        <NotificationBell />
+       
+        <div className="flex items-center gap-1">
+            <button 
+              onClick={toggleTheme}
+              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Toggle Theme"
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+            <NotificationBell />
+          </div>
       </header>
 
       <div className="px-4 py-3 border-b border-border bg-card/80 space-y-2">

@@ -12,6 +12,7 @@ import Chats from "@/pages/Chats";
 import ChatRoom from "@/pages/ChatRoom";
 import Forum from "@/pages/Forum";
 import Profile from "@/pages/Profile";
+import Contact from "@/pages/Contact"
 import LandingPage from "@/pages/LandingPage";
 import CreatePost from "@/pages/CreatePost";
 import PostDetail from "@/pages/PostDetail";
@@ -29,6 +30,7 @@ const App = () => (
         <Routes>
           {/* Landing page */}
           <Route path="/" element={<LandingPage />} />
+
 
           {/* Auth page */}
           <Route
@@ -49,6 +51,7 @@ const App = () => (
           <Route path="/chats" element={<Chats />} />
           <Route path="/chat/:chatId" element={<ChatRoom />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/contact" element={<Contact />} />
 
           {/* Redirect any unknown route to landing */}
           <Route path="*" element={<Navigate to="/" />} />
