@@ -26,6 +26,15 @@ class PostController extends Controller
         // 3. Sort by pinned first, then latest
         $posts = $query->with(['creator', 'category'])
             ->withCount('comments')
+            ->whereDoesntHave('hiddenByUsers', function ($q) {
+                $q->where('user_id', auth()->id());
+            })
+            ->withExists(['savedByUsers as is_saved' => function ($q) {
+                $q->where('user_id', auth()->id());
+            }])
+            ->withExists(['followedByUsers as is_followed' => function ($q) {
+                $q->where('user_id', auth()->id());
+            }])
             ->orderByDesc('is_pinned')
             ->latest()
             ->paginate(15); // Use pagination for performance!
@@ -37,7 +46,14 @@ class PostController extends Controller
     {
         // Load relationships and counts in one go
         return response()->json(
-            $post->load(['creator', 'category'])->loadCount('comments')
+            $post->load(['creator', 'category'])
+                 ->loadCount('comments')
+                 ->loadExists(['savedByUsers as is_saved' => function ($q) {
+                     $q->where('user_id', auth()->id());
+                 }])
+                 ->loadExists(['followedByUsers as is_followed' => function ($q) {
+                     $q->where('user_id', auth()->id());
+                 }])
         );
     }
 
@@ -94,18 +110,18 @@ class PostController extends Controller
     public function report(Request $request, Post $post)
     {
     try {
-        $exists = Report::where('user_id', auth()->id())
-                    ->where('post_id', $post->id)
+        $exists = Report::where('reportable_id', $post->id)
+                    ->where('reportable_type', Post::class)
                     ->exists();
 
         if ($exists) {
-            return response()->json(['message' => 'You have already reported this post.'], 422);
+            return response()->json(['message' => 'This post has already been reported and is currently under invertigation'], 422);
         }
 
         Report::create([
             'user_id' => auth()->id(),
-            'post_id' => $post->id,
-            'reason' => $request->reason ?? 'Reported from Forum',
+            'reportable_id' => $post->id,
+            'reportable_type' => Post::class,
         ]);
 
         return response()->json(['message' => 'Report submitted to moderators.']);
@@ -113,6 +129,37 @@ class PostController extends Controller
         // This will return the actual error message to your console log
         return response()->json(['error' => $e->getMessage()], 500);
     }
+    }
+
+    public function toggleSave(Post $post): JsonResponse
+    {
+        $user = auth()->user();
+        $user->savedPosts()->toggle($post->id);
+        
+        return response()->json([
+            'is_saved' => $user->savedPosts()->where('post_id', $post->id)->exists()
+        ]);
+    }
+
+    public function toggleHide(Post $post): JsonResponse
+    {
+        $user = auth()->user();
+        // Option to fully toggle or just hide. Usually 'Hide' is one-way from the feed, but toggle is fine.
+        $user->hiddenPosts()->toggle($post->id);
+        
+        return response()->json([
+            'is_hidden' => $user->hiddenPosts()->where('post_id', $post->id)->exists()
+        ]);
+    }
+
+    public function toggleFollow(Post $post): JsonResponse
+    {
+        $user = auth()->user();
+        $user->followedPosts()->toggle($post->id);
+        
+        return response()->json([
+            'is_followed' => $user->followedPosts()->where('post_id', $post->id)->exists()
+        ]);
     }
     public function destroy(Post $post): JsonResponse
     {

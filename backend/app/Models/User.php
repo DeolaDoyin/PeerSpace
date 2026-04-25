@@ -83,4 +83,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(ChatMessage::class, 'user_id');
     }
+
+    public function savedPosts()
+    {
+        return $this->belongsToMany(Post::class, 'post_user_saved')->withTimestamps();
+    }
+
+    public function hiddenPosts()
+    {
+        return $this->belongsToMany(Post::class, 'post_user_hidden')->withTimestamps();
+    }
+
+    public function followedPosts()
+    {
+        return $this->belongsToMany(Post::class, 'post_user_followed')->withTimestamps();
+    }
 }

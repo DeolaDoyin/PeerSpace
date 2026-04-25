@@ -9,6 +9,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatMessageController;
+use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\ReportController;
 use App\Services\RedditAliasService;
 
 Route::middleware(['throttle:auth'])->group(function () {
@@ -19,6 +21,9 @@ Route::middleware(['throttle:auth'])->group(function () {
 Route::get('/auth/suggest-username', function () {
     return response(RedditAliasService::getNewAlias());
 })->middleware('throttle:suggest-alias');
+
+Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider']);
+Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback']);
 
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -35,6 +40,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::resource('posts', PostController::class)
         ->except(['index', 'show', 'destroy'])
         ->middleware('throttle:post-write');
+
+    Route::post('/posts/{post}/save', [PostController::class, 'toggleSave']);
+    Route::post('/posts/{post}/hide', [PostController::class, 'toggleHide']);
+    Route::post('/posts/{post}/follow', [PostController::class, 'toggleFollow']);
 
     // Ensure this is inside your auth middleware group if reporting requires login
     Route::middleware('auth:sanctum')->group(function () {
@@ -68,6 +77,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return response()->json(['success' => true]);
     });
 
+    // Reports (User)
+    Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:post-write');
+
     // Like
     Route::post('/posts/{post}/like', [LikeController::class, 'togglePost'])->middleware('throttle:likes');
     Route::post('/comments/{comment}/like', [LikeController::class, 'toggleComment'])->middleware('throttle:likes');
@@ -88,5 +100,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['moderator'])->group(function () {
         Route::patch('/posts/{post}/pin', [PostController::class, 'togglePin']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+        Route::post('/users/suspend', [ModerationController::class, 'suspendUser']);
+        Route::get('/reports', [ReportController::class, 'index']);
+        Route::patch('/reports/{report}/resolve', [ReportController::class, 'resolve']);
     });
 });

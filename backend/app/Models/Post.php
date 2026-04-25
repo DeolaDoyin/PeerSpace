@@ -56,5 +56,20 @@ class Post extends Model
         });
     }
 
+    public function savedByUsers()
+    {
+        return $this->belongsToMany(User::class, 'post_user_saved');
+    }
+
+    public function hiddenByUsers()
+    {
+        return $this->belongsToMany(User::class, 'post_user_hidden');
+    }
+
+    public function followedByUsers()
+    {
+        return $this->belongsToMany(User::class, 'post_user_followed');
+    }
+
     use HasFactory;
 }

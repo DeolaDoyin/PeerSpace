@@ -62,6 +62,10 @@ const Profile = () => {
   const [promoteLogin, setPromoteLogin] = useState("");
   const [promoting, setPromoting] = useState(false);
 
+  // Moderator Suspend State
+  const [suspendLogin, setSuspendLogin] = useState("");
+  const [suspending, setSuspending] = useState(false);
+
   const { data: user, isLoading } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
@@ -118,6 +122,20 @@ const Profile = () => {
       alert(error.response?.data?.message || "Failed to promote user. Check the alias.");
     } finally {
       setPromoting(false);
+    }
+  };
+
+  const handleSuspend = async (status: string) => {
+    if (!suspendLogin.trim()) return;
+    setSuspending(true);
+    try {
+      const res = await api.post('/api/users/suspend', { login: suspendLogin, status });
+      alert(res.data.message);
+      setSuspendLogin("");
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Failed to update member status.");
+    } finally {
+      setSuspending(false);
     }
   };
 
@@ -219,6 +237,45 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* Moderator Gateway */}
+      {(user?.role === 'admin' || user?.role === 'moderator') && (
+        <div className="mt-4 bg-card">
+          <div className="px-4 py-3 border-b border-border">
+            <h2 className="text-sm font-medium text-orange-500 uppercase tracking-wide flex items-center gap-2">
+              Moderation Tools
+            </h2>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Suspend/Restore User</label>
+              <input 
+                type="text" 
+                value={suspendLogin} 
+                onChange={e => setSuspendLogin(e.target.value)} 
+                className="w-full bg-muted border border-border p-2 rounded text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary" 
+                placeholder="User Alias or Email"
+              />
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  onClick={() => handleSuspend('suspended')} 
+                  disabled={suspending || !suspendLogin.trim()} 
+                  className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                   {suspending ? "Processing..." : "Suspend"}
+                </Button>
+                <Button 
+                  onClick={() => handleSuspend('active')} 
+                  disabled={suspending || !suspendLogin.trim()} 
+                  className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                >
+                  Restore
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin Settings (Only visible to admins) */}
       {user?.role === 'admin' && (

@@ -42,13 +42,10 @@ class PostPolicy
         return $user->id === $post->user_id;
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, Post $post): bool
     {
-        // Allow owner or admins (role-based). The User model exposes role string.
-        return $user->id === $post->user_id || ($user->role === 'admin');
+        // Allow owner or admins/moderators (role-based).
+        return $user->id === $post->user_id || in_array($user->role, ['admin', 'moderator']);
     }
 
     /**
