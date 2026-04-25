@@ -310,7 +310,6 @@ const Profile = () => {
         <SettingsItem label="Help & Support" onClick={() => {}} />
         <SettingsItem label="Contact Us" onClick={() => navigate('/contact')} />
         <SettingsItem label="About Us" onClick={() => {}} />
-        <SettingsItem label="More" onClick={() => {}} />
       </div>
 
       {/* Danger Zone */}
