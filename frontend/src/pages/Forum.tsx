@@ -2,12 +2,18 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from '@/api/axios';
-import { Sun, Moon, Flag } from 'lucide-react';
 import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
 import { Card } from "@/components/ui/card";
 import LikeButton from '@/components/LikeButton';
-import { MessageCircle, Loader2, AlertCircle, Plus, Pin, Trash2, Flag } from "lucide-react";
+import { MessageCircle, Loader2, AlertCircle, Plus, Pin, Trash2, Sun, Moon, Flag, MoreHorizontal, Bookmark, EyeOff, Bell } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +36,9 @@ interface Post {
   comments_count: number;
   likes_count: number;
   is_liked?: boolean;
+  is_saved?: boolean;
+  is_hidden?: boolean;
+  is_followed?: boolean;
   is_pinned: boolean;
 }
 
@@ -56,7 +65,6 @@ interface PaginatedResponse {
 const Forum = () => {
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string | number>("All");
-  const [reportData, setReportData] = useState({ isOpen: false, id: 0, type: 'post' as 'post' | 'comment', reason: '' });
 
   // Fetch Current User for Roles
   const { data: user } = useQuery({
@@ -143,28 +151,40 @@ const Forum = () => {
     }
   };
 
-const handleReport = async (postId: number) => {
-  try {
-    // Replace with your actual report endpoint
-    await api.post(`/api/posts/${postId}/report`);
-    alert("Post reported to moderators. Thank you for keeping PeerSpace safe.");
-  } catch (e) {
-    console.error("Failed to report", e);
-    alert("Failed to send report. Please try again later.");
-  }
-};
-
-  const openReportModal = (id: number, type: 'post' | 'comment') => {
-    setReportData({ isOpen: true, id, type, reason: '' });
+  const handleReport = async (postId: number) => {
+    try {
+      const res = await api.post(`/api/posts/${postId}/report`);
+      alert(res.data.message || "Post reported to moderators. Thank you for keeping PeerSpace safe.");
+    } catch (e: any) {
+      console.error("Failed to report", e);
+      alert(e.response?.data?.message || "Failed to send report. Please try again later.");
+    }
   };
 
-  const submitReport = async () => {
-    if (!reportData.reason.trim()) return;
+  const handleSave = async (id: number) => {
     try {
-      await api.post('/api/reports', { reportable_id: reportData.id, reportable_type: reportData.type, reason: reportData.reason });
-      setReportData({ isOpen: false, id: 0, type: 'post', reason: '' });
+      await api.post(`/api/posts/${id}/save`);
+      await queryClient.invalidateQueries({ queryKey: ['forum-posts'] });
     } catch (e) {
-      console.error("Failed to submit report", e);
+      console.error("Failed to save", e);
+    }
+  };
+
+  const handleHide = async (id: number) => {
+    try {
+      await api.post(`/api/posts/${id}/hide`);
+      await queryClient.invalidateQueries({ queryKey: ['forum-posts'] });
+    } catch (e) {
+      console.error("Failed to hide", e);
+    }
+  };
+
+  const handleFollow = async (id: number) => {
+    try {
+      await api.post(`/api/posts/${id}/follow`);
+      await queryClient.invalidateQueries({ queryKey: ['forum-posts'] });
+    } catch (e) {
+      console.error("Failed to follow", e);
     }
   };
 
@@ -275,64 +295,92 @@ const handleReport = async (postId: number) => {
                       initialCount={post.likes_count ?? 0} 
                       initialIsLiked={post.is_liked ?? false} 
                     />
-
-                    {/* --- NEW: Report Button --- */}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <button className="flex items-center gap-1 hover:text-destructive transition-colors">
-                          <Flag className="h-4 w-4" /> Report
-                        </button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="max-w-xs sm:max-w-md">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Report this post?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Is this post violating our community guidelines? Our moderators will review it shortly. 
-                            This action is anonymous.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={() => handleReport(post.id)} 
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Report
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <button onClick={(e) => { e.preventDefault(); openReportModal(post.id, 'post'); }} className="text-muted-foreground hover:text-orange-500 rounded-full transition-colors ml-2" title="Report Post">
-                      <Flag className="h-4 w-4" />
-                    </button>
                   </div>
 
-                  {(user?.role === 'admin' || user?.role === 'moderator') && (
-                    <div className="flex items-center gap-2">
-                      <button onClick={(e) => { e.preventDefault(); handlePin(post.id); }} className="text-muted-foreground hover:text-primary p-2 -my-2 rounded-full transition-colors">
-                        <Pin className="h-4 w-4" />
-                      </button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button className="text-muted-foreground hover:text-destructive p-2 -my-2 rounded-full transition-colors">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="max-w-xs sm:max-w-md">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete this post?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the post and all associated comments safely.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(post.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
+                  <div className="flex items-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground focus:outline-none">
+                          <MoreHorizontal className="h-5 w-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => handleFollow(post.id)}>
+                          <Bell className="h-4 w-4 mr-2" />
+                          <span>{post.is_followed ? 'Unfollow Post' : 'Follow Post'}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSave(post.id)}>
+                          <Bookmark className="h-4 w-4 mr-2" />
+                          <span>{post.is_saved ? 'Unsave' : 'Save'}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleHide(post.id)}>
+                          <EyeOff className="h-4 w-4 mr-2" />
+                          <span>Hide</span>
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator />
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                              <Flag className="h-4 w-4 mr-2" />
+                              <span>Report</span>
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="max-w-xs sm:max-w-md">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Report this post?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Is this post violating our community guidelines? Our moderators will review it shortly. 
+                                This action is anonymous.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleReport(post.id)} 
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Report
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        {(user?.role === 'admin' || user?.role === 'moderator') && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handlePin(post.id)}>
+                              <Pin className="h-4 w-4 mr-2" />
+                              <span>{post.is_pinned ? 'Unpin' : 'Pin'}</span>
+                            </DropdownMenuItem>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="max-w-xs sm:max-w-md">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the post and all associated comments safely.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(post.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -371,36 +419,7 @@ const handleReport = async (postId: number) => {
         <Plus size={24} />
       </Link>
 
-      {/* Report Dialog */}
-      <AlertDialog open={reportData.isOpen} onOpenChange={(isOpen) => setReportData(s => ({...s, isOpen}))}>
-        <AlertDialogContent className="sm:max-w-md w-[90vw] rounded-xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Report Content</AlertDialogTitle>
-            <AlertDialogDescription>
-              Please provide a detailed reason for reporting this content. Our moderation team will review it.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-2">
-            <textarea
-              autoFocus
-              value={reportData.reason}
-              onChange={(e) => setReportData(s => ({ ...s, reason: e.target.value }))}
-              placeholder="E.g., Spam, harassing, inappropriate..."
-              className="w-full min-h-[100px] bg-muted border border-border rounded-md p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={submitReport} 
-              disabled={!reportData.reason.trim()}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              Submit Report
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
 
       <BottomNav />
     </div>

@@ -41,6 +41,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->except(['index', 'show', 'destroy'])
         ->middleware('throttle:post-write');
 
+    Route::post('/posts/{post}/save', [PostController::class, 'toggleSave']);
+    Route::post('/posts/{post}/hide', [PostController::class, 'toggleHide']);
+    Route::post('/posts/{post}/follow', [PostController::class, 'toggleFollow']);
+
     // Ensure this is inside your auth middleware group if reporting requires login
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/posts/{post}/report', [PostController::class, 'report']);

@@ -26,7 +26,6 @@ class ReportController extends Controller
         $validated = $request->validate([
             'reportable_id' => 'required|integer',
             'reportable_type' => 'required|string|in:post,comment',
-            'reason' => 'required|string|max:255',
         ]);
 
         $typeClass = $validated['reportable_type'] === 'post' ? Post::class : Comment::class;
@@ -40,7 +39,6 @@ class ReportController extends Controller
             'user_id' => $request->user()->id,
             'reportable_id' => $validated['reportable_id'],
             'reportable_type' => $typeClass,
-            'reason' => $validated['reason'],
             'status' => 'pending',
         ]);
 
