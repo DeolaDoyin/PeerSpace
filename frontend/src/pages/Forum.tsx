@@ -7,7 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
 import { Card } from "@/components/ui/card";
 import LikeButton from '@/components/LikeButton';
-import { MessageCircle, Loader2, AlertCircle, Plus, Pin, Trash2 } from "lucide-react";
+import { MessageCircle, Loader2, AlertCircle, Plus, Pin, Trash2, Flag } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +56,7 @@ interface PaginatedResponse {
 const Forum = () => {
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState<string | number>("All");
+  const [reportData, setReportData] = useState({ isOpen: false, id: 0, type: 'post' as 'post' | 'comment', reason: '' });
 
   // Fetch Current User for Roles
   const { data: user } = useQuery({
@@ -152,6 +153,20 @@ const handleReport = async (postId: number) => {
     alert("Failed to send report. Please try again later.");
   }
 };
+
+  const openReportModal = (id: number, type: 'post' | 'comment') => {
+    setReportData({ isOpen: true, id, type, reason: '' });
+  };
+
+  const submitReport = async () => {
+    if (!reportData.reason.trim()) return;
+    try {
+      await api.post('/api/reports', { reportable_id: reportData.id, reportable_type: reportData.type, reason: reportData.reason });
+      setReportData({ isOpen: false, id: 0, type: 'post', reason: '' });
+    } catch (e) {
+      console.error("Failed to submit report", e);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -287,6 +302,9 @@ const handleReport = async (postId: number) => {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                    <button onClick={(e) => { e.preventDefault(); openReportModal(post.id, 'post'); }} className="text-muted-foreground hover:text-orange-500 rounded-full transition-colors ml-2" title="Report Post">
+                      <Flag className="h-4 w-4" />
+                    </button>
                   </div>
 
                   {(user?.role === 'admin' || user?.role === 'moderator') && (
@@ -352,6 +370,37 @@ const handleReport = async (postId: number) => {
       >
         <Plus size={24} />
       </Link>
+
+      {/* Report Dialog */}
+      <AlertDialog open={reportData.isOpen} onOpenChange={(isOpen) => setReportData(s => ({...s, isOpen}))}>
+        <AlertDialogContent className="sm:max-w-md w-[90vw] rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report Content</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a detailed reason for reporting this content. Our moderation team will review it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <textarea
+              autoFocus
+              value={reportData.reason}
+              onChange={(e) => setReportData(s => ({ ...s, reason: e.target.value }))}
+              placeholder="E.g., Spam, harassing, inappropriate..."
+              className="w-full min-h-[100px] bg-muted border border-border rounded-md p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={submitReport} 
+              disabled={!reportData.reason.trim()}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              Submit Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BottomNav />
     </div>

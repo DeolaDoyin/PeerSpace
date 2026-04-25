@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\Post;
 use App\Models\Category;
+use Laravel\Sanctum\Sanctum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -33,7 +34,9 @@ class ModerationTest extends TestCase
         $moderator = User::factory()->create(['role' => 'moderator']);
         $user = User::factory()->create(['role' => 'user', 'account_status' => 'active']);
 
-        $response = $this->actingAs($moderator)->postJson("/api/users/{$user->id}/suspend", [
+        Sanctum::actingAs($moderator, ['*']);
+        $response = $this->postJson("/api/users/suspend", [
+            'login' => $user->email,
             'status' => 'suspended'
         ]);
 
@@ -50,12 +53,16 @@ class ModerationTest extends TestCase
         $category = Category::factory()->create();
         
         $author = User::factory()->create();
-        $post = Post::factory()->create([
+        $post = Post::create([
+            'title' => 'Test Post',
+            'slug' => 'test-post-' . uniqid(),
+            'body' => 'This is a test post body.',
             'user_id' => $author->id,
             'category_id' => $category->id
         ]);
 
-        $response = $this->actingAs($moderator)->deleteJson("/api/posts/{$post->id}");
+        Sanctum::actingAs($moderator, ['*']);
+        $response = $this->deleteJson("/api/posts/{$post->id}");
 
         $response->assertStatus(200);
         $this->assertDatabaseMissing('posts', ['id' => $post->id]);
@@ -65,11 +72,18 @@ class ModerationTest extends TestCase
     {
         $user = User::factory()->create();
         $category = Category::factory()->create();
-        $post = Post::factory()->create(['user_id' => $user->id, 'category_id' => $category->id]);
+        $post = Post::create([
+            'title' => 'Test Post 2',
+            'slug' => 'test-post-2-' . uniqid(),
+            'body' => 'This is a test post body 2.',
+            'user_id' => $user->id,
+            'category_id' => $category->id
+        ]);
 
         $reporter = User::factory()->create();
         
-        $response = $this->actingAs($reporter)->postJson('/api/reports', [
+        Sanctum::actingAs($reporter, ['*']);
+        $response = $this->postJson('/api/reports', [
             'reportable_id' => $post->id,
             'reportable_type' => 'post',
             'reason' => 'inappropriate content'

@@ -3,11 +3,21 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/axios";
 import { getEcho } from "@/lib/echo";
-import { ArrowLeft, Loader2, MessageCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle, Trash2, Flag } from "lucide-react";
 import LikeButton from "@/components/LikeButton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface CommentRow {
   id: number;
@@ -40,6 +50,7 @@ const PostDetail = () => {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [reportData, setReportData] = useState({ isOpen: false, id: 0, type: 'post' as 'post' | 'comment', reason: '' });
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -149,6 +160,20 @@ const PostDetail = () => {
     }
   };
 
+  const openReportModal = (id: number, type: 'post' | 'comment') => {
+    setReportData({ isOpen: true, id, type, reason: '' });
+  };
+
+  const submitReport = async () => {
+    if (!reportData.reason.trim()) return;
+    try {
+      await api.post('/api/reports', { reportable_id: reportData.id, reportable_type: reportData.type, reason: reportData.reason });
+      setReportData({ isOpen: false, id: 0, type: 'post', reason: '' });
+    } catch (e) {
+      console.error("Failed to submit report", e);
+    }
+  };
+
   const canDeleteComment = (c: CommentRow) => {
     if (!user?.id) return false;
     if (c.user_id === user.id) return true;
@@ -206,6 +231,9 @@ const PostDetail = () => {
             <span className="flex items-center gap-1">
               <MessageCircle className="h-4 w-4" /> {post.comments_count ?? 0}
             </span>
+            <button onClick={(e) => { e.preventDefault(); openReportModal(post.id, 'post'); }} className="text-muted-foreground hover:text-orange-500 rounded-full transition-colors ml-auto" title="Report Post">
+              <Flag className="h-4 w-4" />
+            </button>
           </div>
         </Card>
 
@@ -240,16 +268,25 @@ const PostDetail = () => {
                   <span>•</span>
                   <span>{c.created_at ? formatDistanceToNow(new Date(c.created_at)) + " ago" : ""}</span>
                 </div>
-                {canDeleteComment(c) && (
+                <div className="flex items-center gap-2">
                   <button
-                    type="button"
-                    onClick={() => handleDeleteComment(c.id)}
-                    className="text-muted-foreground hover:text-destructive p-1 rounded-md"
-                    aria-label="Delete comment"
+                    onClick={(e) => { e.preventDefault(); openReportModal(c.id, 'comment'); }}
+                    className="text-muted-foreground hover:text-orange-500 p-1 rounded-md"
+                    title="Report Comment"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Flag className="h-4 w-4" />
                   </button>
-                )}
+                  {canDeleteComment(c) && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteComment(c.id)}
+                      className="text-muted-foreground hover:text-destructive p-1 rounded-md"
+                      aria-label="Delete comment"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-sm text-foreground mb-3 whitespace-pre-wrap">{c.content}</p>
               <div className="flex justify-end border-t border-border pt-2 mt-2">
@@ -269,6 +306,37 @@ const PostDetail = () => {
           )}
         </div>
       </main>
+
+      {/* Report Dialog */}
+      <AlertDialog open={reportData.isOpen} onOpenChange={(isOpen) => setReportData(s => ({...s, isOpen}))}>
+        <AlertDialogContent className="sm:max-w-md w-[90vw] rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report Content</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a detailed reason for reporting this content. Our moderation team will review it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <textarea
+              autoFocus
+              value={reportData.reason}
+              onChange={(e) => setReportData(s => ({ ...s, reason: e.target.value }))}
+              placeholder="E.g., Spam, harassing, inappropriate..."
+              className="w-full min-h-[100px] bg-muted border border-border rounded-md p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={submitReport} 
+              disabled={!reportData.reason.trim()}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              Submit Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

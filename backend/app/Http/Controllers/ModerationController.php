@@ -7,8 +7,19 @@ use Illuminate\Http\Request;
 
 class ModerationController extends Controller
 {
-    public function suspendUser(Request $request, User $user)
+    public function suspendUser(Request $request)
     {
+        $validated = $request->validate([
+            'login' => 'required|string',
+            'status' => 'required|in:active,suspended'
+        ]);
+
+        $user = User::where('email', $validated['login'])->orWhere('name', $validated['login'])->first();
+        
+        if (!$user) {
+            return response()->json(['error' => 'User not found.'], 404);
+        }
+
         // Must be admin or moderator - managed by middleware in routes, but let's double check
         $currentUser = $request->user();
         if (!in_array($currentUser->role, ['admin', 'moderator'])) {
@@ -19,10 +30,6 @@ class ModerationController extends Controller
         if ($user->role === 'admin') {
             return response()->json(['error' => 'Cannot suspend an administrator.'], 403);
         }
-
-        $validated = $request->validate([
-            'status' => 'required|in:active,suspended'
-        ]);
 
         $user->update(['account_status' => $validated['status']]);
 

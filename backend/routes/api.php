@@ -22,6 +22,9 @@ Route::get('/auth/suggest-username', function () {
     return response(RedditAliasService::getNewAlias());
 })->middleware('throttle:suggest-alias');
 
+Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider']);
+Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback']);
+
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -93,7 +96,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware(['moderator'])->group(function () {
         Route::patch('/posts/{post}/pin', [PostController::class, 'togglePin']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
-        Route::post('/users/{user}/suspend', [ModerationController::class, 'suspendUser']);
+        Route::post('/users/suspend', [ModerationController::class, 'suspendUser']);
         Route::get('/reports', [ReportController::class, 'index']);
         Route::patch('/reports/{report}/resolve', [ReportController::class, 'resolve']);
     });

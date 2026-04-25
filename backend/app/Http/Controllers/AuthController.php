@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -157,5 +159,38 @@ class AuthController extends Controller
         return response()->json([
             'message' => "Successfully updated {$user->name} to {$request->role}!"
         ]);
+    }
+
+    public function redirectToProvider($provider)
+    {
+        return response()->json([
+            'url' => Socialite::driver($provider)->stateless()->redirect()->getTargetUrl()
+        ]);
+    }
+
+    public function handleProviderCallback($provider)
+    {
+        try {
+            $socialUser = Socialite::driver($provider)->stateless()->user();
+            $user = User::where('email', $socialUser->getEmail())->first();
+
+            if (!$user) {
+                $user = User::create([
+                    'name' => 'Anon_' . Str::random(6),
+                    'email' => $socialUser->getEmail(),
+                    'password' => Hash::make(Str::random(24)),
+                    'account_status' => 'active',
+                ]);
+            }
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+            
+            return redirect()->away($frontendUrl . "/auth#oauth_token=" . $token);
+        } catch (\Exception $e) {
+            \Log::error('Socialite Error', ['exception' => $e]);
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+            return redirect()->away($frontendUrl . "/auth?error=oauth_failed");
+        }
     }
 }
