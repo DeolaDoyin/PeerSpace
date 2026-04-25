@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Category;
+use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -90,6 +91,29 @@ class PostController extends Controller
         ]);
     }
 
+    public function report(Request $request, Post $post)
+    {
+    try {
+        $exists = Report::where('user_id', auth()->id())
+                    ->where('post_id', $post->id)
+                    ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'You have already reported this post.'], 422);
+        }
+
+        Report::create([
+            'user_id' => auth()->id(),
+            'post_id' => $post->id,
+            'reason' => $request->reason ?? 'Reported from Forum',
+        ]);
+
+        return response()->json(['message' => 'Report submitted to moderators.']);
+    } catch (\Exception $e) {
+        // This will return the actual error message to your console log
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+    }
     public function destroy(Post $post): JsonResponse
     {
         // Authorize the deletion via policy (owner or admin)

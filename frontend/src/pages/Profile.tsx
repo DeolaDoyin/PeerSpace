@@ -1,10 +1,10 @@
 import api from "@/api/axios";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { Pencil, Share2, Trash2, Check, X } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Menu, Pencil, Share2, Trash2, Check, X, Sun, Moon } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import AppHeader from "@/components/AppHeader";
+import NotificationBell from "@/components/NotificationBell";
 import AnonAvatar from "@/components/AnonAvatar";
 import SettingsItem from "@/components/SettingsItem";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,30 @@ const Profile = () => {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // --- Theme Logic ---
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("theme") || "light";
+    }
+    return "light";
+  });
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    // Direct DOM injection for zero-lag response
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("theme", newTheme);
+    setTheme(newTheme);
+  };
+
+  // Sync state with DOM on mount
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, []);
+  // -------------------
+
+
 
   // Admin Category State
   const [catName, setCatName] = useState("");
@@ -98,21 +122,53 @@ const Profile = () => {
   };
 
   const handleLogout = async () => {
-    try {
-        // Tell Laravel to kill the session/token
-        await api.post('/api/logout');
-    } catch (error) {
-        console.error("Server logout failed", error);
-    } finally {
-        //Clear token from local storage
-        localStorage.removeItem('token');
-        navigate('/auth');
-    }
-  };
+  try {
+    // 1. Tell the server to invalidate the session
+    await api.post('/api/logout');
+  } catch (error) {
+    console.error("Server logout failed", error);
+  } finally {
+    // 2. Clear the token from storage
+    localStorage.removeItem('token');
+
+    // 3. CRITICAL: Wipe the React Query cache
+    // This forces the Navbar and other components to re-check auth
+    queryClient.clear(); 
+
+    // 4. Redirect
+    navigate('/auth');
+  }
+};
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <AppHeader />
+    <div className="min-h-screen bg-background pb-20 transition-colors duration-300">
+      {/* Header */}
+      <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
+              <Menu className="h-5 w-5" />
+            </button>
+            
+            <Link to="/">
+              <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={toggleTheme}
+              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Toggle Theme"
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+            
+            <NotificationBell />
+          </div>
+        </div>
+      </header>
 
       {/* Profile Card */}
       <div className="px-4 py-6 bg-card">
@@ -252,7 +308,7 @@ const Profile = () => {
       {/* Help Section */}
       <div className="mt-4 bg-card">
         <SettingsItem label="Help & Support" onClick={() => {}} />
-        <SettingsItem label="FAQ" onClick={() => {}} />
+        <SettingsItem label="Contact Us" onClick={() => navigate('/contact')} />
         <SettingsItem label="About Us" onClick={() => {}} />
         <SettingsItem label="More" onClick={() => {}} />
       </div>
