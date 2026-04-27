@@ -364,7 +364,7 @@ const Profile = () => {
 
       {/* Help Section */}
       <div className="mt-4 bg-card">
-        <SettingsItem label="Help & Support" onClick={() => {}} />
+        <SettingsItem label="Help & Support" onClick={() => navigate('/#crisis')} />
         <SettingsItem label="Contact Us" onClick={() => navigate('/contact')} />
         <SettingsItem label="About Us" onClick={() => {}} />
       </div>

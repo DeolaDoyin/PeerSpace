@@ -1,6 +1,6 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { Mail, Clock, Send, Twitter, Linkedin, Instagram, MessageSquare, Menu, Sun, Moon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Mail, Clock, Send, Twitter, Linkedin, Instagram, MessageSquare, Sun, Moon, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -12,6 +12,8 @@ interface FormData {
 }
 
 const Contact = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -56,8 +58,12 @@ const Contact = () => {
       <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
-              <Menu className="h-5 w-5" />
+            <button 
+              onClick={() => navigate(-1)} // Navigates to the previous page
+              className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors text-foreground"
+              aria-label="Go Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <Link to="/">
               <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
