@@ -27,14 +27,21 @@ const SettingsItem = ({
   icon,
 }: SettingsItemProps) => {
   return (
-    <button
+    <div
       onClick={onClick}
       className={cn(
-        "w-full flex items-center justify-between px-4 py-4",
+        "w-full flex items-center justify-between px-4 py-4 cursor-pointer text-left",
         "border-b border-border last:border-b-0",
         "transition-colors duration-150 hover:bg-muted/50",
         variant === "destructive" && "text-destructive"
       )}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          onClick?.();
+        }
+      }}
     >
       <span className="font-medium">{label}</span>
       {hasArrow && !hasCheckbox && (
@@ -48,7 +55,7 @@ const SettingsItem = ({
 />
       )}
       {icon && icon}
-    </button>
+    </div>
   );
 };
 
