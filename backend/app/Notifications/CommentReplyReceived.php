@@ -2,24 +2,24 @@
 
 namespace App\Notifications;
 
-use App\Models\Post;
+use App\Models\Comment;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class NewComment extends Notification implements ShouldBroadcast
+class CommentReplyReceived extends Notification implements ShouldBroadcast
 {
     use Queueable;
 
-    public $post;
-    public $commenter;
+    public $parentComment;
+    public $replier;
 
-    public function __construct(Post $post, User $commenter)
+    public function __construct(Comment $parentComment, User $replier)
     {
-        $this->post = $post;
-        $this->commenter = $commenter;
+        $this->parentComment = $parentComment;
+        $this->replier = $replier;
     }
 
     public function via($notifiable)
@@ -29,13 +29,14 @@ class NewComment extends Notification implements ShouldBroadcast
 
     public function toDatabase($notifiable)
     {
+        $post = $this->parentComment->post;
         return [
-            'post_id' => $this->post->id,
-            'post_slug' => $this->post->slug,
-            'post_title' => $this->post->title,
-            'commenter_name' => $this->commenter->name,
-            'type' => 'comment',
-            'message' => "{$this->commenter->name} commented on your post."
+            'post_id' => $post->id,
+            'post_slug' => $post->slug,
+            'post_title' => $post->title,
+            'commenter_name' => $this->replier->name,
+            'type' => 'comment_reply',
+            'message' => "{$this->replier->name} replied to your comment."
         ];
     }
 

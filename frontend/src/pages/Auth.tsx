@@ -4,7 +4,6 @@ import api from "@/api/axios";
 import FloatingInput from "@/components/FloatingInput";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw, Sun, Moon } from "lucide-react";
-import AppHeader from "@/components/AppHeader";
 
 // Moved SocialButton up or defined it clearly so it's recognized
 const SocialButton = ({ icon }: { icon: string }) => (
@@ -142,10 +141,9 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col transition-colors duration-300 relative">
-      <AppHeader />
       
       {/* Theme Toggle Button */}
-      <div className="absolute top-20 right-6 z-50">
+      <div className="absolute top-4 right-4 z-50">
         <button
           onClick={toggleTheme}
           type="button"

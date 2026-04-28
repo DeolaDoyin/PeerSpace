@@ -22,7 +22,14 @@ class LikeController extends Controller
 
     public function toggleComment(Comment $comment)
     {
-        return $this->toggle($comment);
+        $response = $this->toggle($comment);
+        $data = $response->getData();
+        
+        if ($data->liked && $comment->user_id !== auth()->id()) {
+            $comment->user->notify(new \App\Notifications\CommentLiked($comment, auth()->user()));
+        }
+
+        return $response;
     }
 
     protected function toggle($model)

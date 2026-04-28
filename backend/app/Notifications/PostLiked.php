@@ -5,9 +5,11 @@ namespace App\Notifications;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class PostLiked extends Notification
+class PostLiked extends Notification implements ShouldBroadcast
 {
     use Queueable;
 
@@ -22,7 +24,7 @@ class PostLiked extends Notification
 
     public function via($notifiable)
     {
-        return ['database'];
+        return ['database', 'broadcast'];
     }
 
     public function toDatabase($notifiable)
@@ -35,5 +37,15 @@ class PostLiked extends Notification
             'type' => 'like',
             'message' => "{$this->liker->name} liked your post."
         ];
+    }
+
+    public function toBroadcast($notifiable): BroadcastMessage
+    {
+        return new BroadcastMessage([
+            'id' => $this->id,
+            'type' => static::class,
+            'data' => $this->toDatabase($notifiable),
+            'created_at' => now()->toIso8601String(),
+        ]);
     }
 }

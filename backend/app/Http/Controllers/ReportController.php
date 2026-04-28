@@ -7,6 +7,9 @@ use App\Models\Post;
 use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use App\Models\User;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\ContentReported;
 
 class ReportController extends Controller
 {
@@ -41,6 +44,9 @@ class ReportController extends Controller
             'reportable_type' => $typeClass,
             'status' => 'pending',
         ]);
+
+        $moderators = User::whereIn('role', ['admin', 'moderator'])->get();
+        Notification::send($moderators, new ContentReported($validated['reportable_type'], $validated['reportable_id'], $request->user()));
 
         return response()->json([
             'message' => 'Report submitted successfully.',

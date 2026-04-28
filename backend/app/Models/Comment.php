@@ -14,6 +14,7 @@ class Comment extends Model
         'user_id',
         'post_id',
         'content',
+        'parent_id',
     ];
     public function post() : BelongsTo
     {
@@ -30,4 +31,13 @@ class Comment extends Model
         return $this->morphMany(Like::class, 'likeable');
     }
 
+    public function parent() : BelongsTo
+    {
+        return $this->belongsTo(Comment::class, 'parent_id');
+    }
+
+    public function replies()
+    {
+        return $this->hasMany(Comment::class, 'parent_id');
+    }
 }
