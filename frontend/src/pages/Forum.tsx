@@ -395,6 +395,7 @@ const Forum = () => {
                           </>
                         )}
                         {(user?.role === 'admin' || user?.role === 'moderator' || user?.id === post.user_id) && (
+                          <>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
