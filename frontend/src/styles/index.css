@@ -155,6 +155,13 @@
     transition-duration: 200ms;
   }
 
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: auto; /* Prevents the 'looping' page scroll */
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -164,9 +171,18 @@
   }
 
   #root {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 2rem;
-    text-align: center;
+    min-height: 100%;
+    width: 100%;
+    /* Remove max-width and padding here so they don't break full-screen pages */
+    margin: 0;
+    padding: 0;
   }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 10px;
 }

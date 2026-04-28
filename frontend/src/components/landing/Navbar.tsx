@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Heart, Menu, Moon, Sun, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import api from "@/api/axios";
@@ -43,8 +43,9 @@ const Navbar = () => {
   };
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, []);
+  const savedTheme = localStorage.getItem("theme") || "light";
+  document.documentElement.classList.toggle("dark", savedTheme === "dark");
+}, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
@@ -104,6 +105,12 @@ const Navbar = () => {
               </button>
             </SheetTrigger>
             <SheetContent side="right" className="w-72">
+              <SheetHeader className="text-left">
+                <SheetTitle>Navigation Menu</SheetTitle>
+                <SheetDescription>
+                  Browse PeerSpace resources and community links.
+                </SheetDescription>
+              </SheetHeader>
               <div className="mt-8 flex flex-col gap-4">
                 {navLinks.map((link) => (
                   <a

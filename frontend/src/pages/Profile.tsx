@@ -47,8 +47,9 @@ const Profile = () => {
 
   // Sync state with DOM on mount
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, []);
+  const savedTheme = localStorage.getItem("theme") || "light";
+  document.documentElement.classList.toggle("dark", savedTheme === "dark");
+}, []);
   // -------------------
 
 
