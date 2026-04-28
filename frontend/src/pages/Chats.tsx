@@ -135,7 +135,7 @@ const Chats = () => {
       </header>
 
       <div className="px-4 py-3 border-b border-border bg-card/80 space-y-2">
-        <p className="text-xs text-muted-foreground">Start a chat with another member (user ID)</p>
+        <p className="text-xs text-muted-foreground">Start a chat with another member</p>
         <div className="flex gap-2">
           <input
             type="text"
