@@ -103,10 +103,17 @@ const ChatRoom = () => {
   };
 
   useEffect(() => {
+  const isDark = theme === "dark";
+  document.documentElement.classList.toggle("dark", isDark);
+  
+  // This is the magic line that fixes the "blinding white" native UI
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  
+  // Keep your existing body style logic
+  if (location.pathname.startsWith('/chat/')) {
     document.body.style.overflow = "hidden";
-
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
+  }
+}, [theme, location.pathname]);
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -251,7 +258,7 @@ const ChatRoom = () => {
   }
 
   return (
-    <div className="h-[100dvh] w-full bg-background flex flex-col overflow-hidden transition-colors duration-300">
+    <div className="h-dvh w-full bg-background flex flex-col overflow-hidden transition-colors duration-300">
       <header className="flex-none bg-card border-b border-border px-4 py-3 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
