@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2, MoreVertical, Sun, Moon } from "lucide-react";
+import { ArrowLeft, Loader2, MoreVertical, Sun, Moon, Flag, User } from "lucide-react";
 import api from "@/api/axios";
 import { toast } from "sonner";
 import { getEcho } from "@/lib/echo";
@@ -10,6 +10,8 @@ import MessageBubble from "@/components/MessageBubble";
 import ChatInput from "@/components/ChatInput";
 import AnonAvatar from "@/components/AnonAvatar";
 import type { ChatListRow } from "@/pages/Chats";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
 
 interface ChatMessageApi {
   id: number;
@@ -197,6 +199,18 @@ const ChatRoom = () => {
     };
   }, [user?.id, chatIdNum, queryClient]);
 
+  const handleReportUser = async () => {
+  if (!chatIdNum) return;
+  try {
+    // Calling the report endpoint for the specific chat/user
+    const res = await api.post(`/api/chats/${chatIdNum}/report-user`);
+    toast.success(res.data.message || "User reported. Thank you for keeping PeerSpace safe.");
+  } catch (e: any) {
+    console.error("Failed to report user", e);
+    toast.error(e.response?.data?.message || "Failed to send report.");
+  }
+};
+
   const handleSend = useCallback(
     async (text: string) => {
       if (!user?.id || !Number.isFinite(chatIdNum)) return;
@@ -264,9 +278,56 @@ const ChatRoom = () => {
               {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </button>
           
-            <button type="button" className="p-2 hover:bg-muted rounded-full transition-colors">
-              <MoreVertical className="h-5 w-5 text-muted-foreground" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="p-2 hover:bg-muted rounded-full transition-colors focus:outline-none">
+                  <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              
+              <DropdownMenuContent align="end" className="w-48">
+                {/* Link to Profile Page */}
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center cursor-pointer">
+                    <User className="h-4 w-4 mr-2" />
+                    <span>View Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {/* Report User Alert Dialog */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem 
+                      onSelect={(e) => e.preventDefault()} 
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                    >
+                      <Flag className="h-4 w-4 mr-2" />
+                      <span>Report User</span>
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="max-w-xs sm:max-w-md">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Report this peer?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Is this user violating our community guidelines? Our moderators will review this chat shortly. 
+                        This action is anonymous.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleReportUser}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Report
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
