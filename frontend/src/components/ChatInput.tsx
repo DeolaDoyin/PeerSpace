@@ -15,7 +15,20 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Quick emoji list for the demo
-  const quickEmojis = ["😊", "😂", "❤️", "👍", "🙌", "🙏", "😮", "😢"];
+  const quickEmojis = [
+    // Faces & Emotion
+    "😊", "😂", "🤣", "❤️", "😍", "🥰", "😎", "🤔", "🤨", "😐", 
+    "🙄", "😏", "😴", "😮", "😱", "😢", "😭", "😤", "😡", "🥳", 
+    "😇", "🤠", "🤡", "🤢", "🤯", "🫠", "✨", "🔥", "💯", "💢",
+    
+    // Gestures & People
+    "👍", "👎", "🙌", "🙏", "👏", "🤝", "👋", "✌️", "🤘", "🤟", 
+    "🤞", "👊", "💪", "🧠", "🫂", "👀",
+    
+    // Symbols & Activities
+    "💬", "💭", "📢", "🌈", "☀️", "🌙", "⭐", "🍀", "🎉", "🎈", 
+    "🎁", "🏆", "🎮", "🎵", "📷", "📍", "🛡️", "🔑", "🚀"
+  ];
 
   const handleSend = async () => {
     if (message.trim() && !disabled) {
@@ -71,16 +84,19 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
     <div className="relative p-3 bg-card border-t border-border transition-colors duration-300">
       {/* Emoji Quick Picker Popover */}
       {showEmojiPicker && (
-        <div className="absolute bottom-16 left-4 bg-card border border-border p-2 rounded-xl shadow-2xl flex gap-2 animate-in fade-in slide-in-from-bottom-2 z-50">
-          {quickEmojis.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => addEmoji(emoji)}
-              className="text-xl hover:scale-125 transition-transform p-1"
-            >
-              {emoji}
-            </button>
-          ))}
+        <div className="absolute bottom-16 left-4 bg-card border border-border p-3 rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 z-50">
+          {/* Grid Layout for 50+ Emojis */}
+          <div className="grid grid-cols-6 gap-1 max-h-56 overflow-y-auto w-64 pr-2 custom-scrollbar">
+            {quickEmojis.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => addEmoji(emoji)}
+                className="text-xl hover:scale-125 hover:bg-muted transition-all p-2 rounded-lg"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -117,6 +133,7 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
           <input
             id="chat-input-field"
             type="text"
+            autoComplete="off"
             value={message}
             disabled={disabled}
             onChange={(e) => setMessage(e.target.value)}
