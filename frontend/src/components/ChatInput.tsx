@@ -1,3 +1,4 @@
+// for this to work the [ BROADCAST_CONNECTION=log ] in the .env must be set to log in order for the chats to be posted smoothly without reloading the page, till a proper webserver is added to handle it.
 import { useState, useRef } from "react";
 import { Plus, Smile, Search, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
