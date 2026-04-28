@@ -25,7 +25,11 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Sonner />
+      <Sonner 
+        position="bottom-center" 
+        richColors 
+        closeButton
+      />
       <BrowserRouter>
         <Routes>
           {/* Landing page */}

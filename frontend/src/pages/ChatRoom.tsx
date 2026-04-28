@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2, Paperclip, MoreVertical } from "lucide-react";
+import { ArrowLeft, Loader2, MoreVertical, Sun, Moon } from "lucide-react";
 import api from "@/api/axios";
+import { toast } from "sonner";
 import { getEcho } from "@/lib/echo";
 import MessageBubble from "@/components/MessageBubble";
 import ChatInput from "@/components/ChatInput";
@@ -86,6 +87,24 @@ const ChatRoom = () => {
 
   const [sending, setSending] = useState(false);
 
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("theme") || "light";
+    }
+    return "light";
+  });
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
+    localStorage.setItem("theme", newTheme);
+    setTheme(newTheme);
+  };
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]); // Added theme to dependency array for consistency
+
   const { data: user } = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
@@ -161,31 +180,36 @@ const ChatRoom = () => {
   }, [user?.id, chatIdNum, queryClient]);
 
   const handleSend = useCallback(
-    async (text: string) => {
-      if (!user?.id || !Number.isFinite(chatIdNum)) return;
-      setSending(true);
-      try {
-        const { data } = await api.post<ChatMessageApi>(`/api/chats/${chatIdNum}/messages`, {
-          body: text,
-        });
-        const created: ChatMessageApi = {
-          ...data,
-          sender: data.sender ?? { id: user.id, name: user.name ?? "You" },
-        };
-        queryClient.setQueryData<MessagesPage | undefined>(
-          ["chat-messages", chatIdNum],
-          (prev) => mergeMessageIntoPage(prev, created)
-        );
-        queryClient.invalidateQueries({ queryKey: ["chats"] });
-      } catch {
-        console.error("Failed to send message");
-        throw new Error("send failed");
-      } finally {
-        setSending(false);
-      }
-    },
-    [chatIdNum, queryClient, user]
-  );
+  async (text: string) => {
+    if (!user?.id || !Number.isFinite(chatIdNum)) return;
+    
+    setSending(true);
+    try {
+      // 1. Post to the backend
+      const { data } = await api.post<ChatMessageApi>(`/api/chats/${chatIdNum}/messages`, {
+        body: text,
+      });
+
+      // 2. Update the cache using the function you already defined (mergeMessageIntoPage)
+      // We use the 'data' directly from the server response
+      queryClient.setQueryData<MessagesPage | undefined>(
+        ["chat-messages", chatIdNum],
+        (prev) => mergeMessageIntoPage(prev, data)
+      );
+
+      // 3. Refresh the sidebar list
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+
+    } catch (err) {
+      // Log the actual error to the console so you can see it in F12
+      console.error("ChatRoom Send Error:", err);
+      toast.error("Message sent to server, but UI failed to update.");
+    } finally {
+      setSending(false);
+    }
+  },
+  [chatIdNum, queryClient, user]
+);
 
   const invalid = !Number.isFinite(chatIdNum) || chatIdNum <= 0;
 
@@ -217,13 +241,21 @@ const ChatRoom = () => {
             <h1 className="text-lg font-semibold text-foreground truncate">{peerName}</h1>
           </div>
 
-          <button type="button" className="p-2 hover:bg-muted rounded-full transition-colors">
-            <Paperclip className="h-5 w-5 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={toggleTheme}
+              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Toggle Theme"
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+          
           <button type="button" className="p-2 hover:bg-muted rounded-full transition-colors">
             <MoreVertical className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
+      </div>
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
