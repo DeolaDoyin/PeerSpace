@@ -6,6 +6,9 @@ use App\Events\CommentCreated;
 use App\Models\Post;
 use App\Models\Comment;
 use App\Notifications\NewComment;
+use App\Notifications\NewCommentOnFollowedPost;
+use App\Notifications\CommentReplyReceived;
+use App\Notifications\ContentDeleted;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
@@ -31,20 +34,41 @@ class CommentController extends Controller
         // 1. Validate the input
         $request->validate([
             'content' => 'required|string|max:1000',
+            'parent_id' => 'nullable|exists:comments,id',
         ]);
 
         // 2. Save to the database
         $comment = $post->comments()->create([
             'content' => $request->content,
             'user_id' => auth()->id(), // The currently logged in user
+            'parent_id' => $request->parent_id,
         ]);
 
-        // 3. Send notification to the post author
+        // 3. Send notifications
         $postOwner = $post->creator;
-        
-        // Don't notify the user about their own comment!
-        if ($postOwner->id !== auth()->id()) {
-            $postOwner->notify(new NewComment($post, auth()->user()));
+        $currentUser = auth()->user();
+        $parentOwnerId = null;
+
+        // Notify parent comment owner if this is a reply
+        if ($request->parent_id) {
+            $parentComment = Comment::find($request->parent_id);
+            if ($parentComment && $parentComment->user_id !== $currentUser->id) {
+                $parentComment->user->notify(new CommentReplyReceived($parentComment, $currentUser));
+                $parentOwnerId = $parentComment->user_id;
+            }
+        }
+
+        // Notify post owner (prevent duplicate if they already got a reply notification)
+        if ($postOwner->id !== $currentUser->id && $postOwner->id !== $parentOwnerId) {
+            $postOwner->notify(new NewComment($post, $currentUser));
+        }
+
+        // Notify followers
+        $post->load('followedByUsers');
+        foreach ($post->followedByUsers as $follower) {
+            if ($follower->id !== $currentUser->id && $follower->id !== $postOwner->id && $follower->id !== $parentOwnerId) {
+                $follower->notify(new NewCommentOnFollowedPost($post, $currentUser));
+            }
         }
 
         $comment->load('user');
@@ -57,6 +81,10 @@ class CommentController extends Controller
     {
         // This one line checks the 'delete' method in CommentPolicy
         $this->authorize('delete', $comment);
+
+        if ($comment->user_id !== auth()->id()) {
+            $comment->user->notify(new ContentDeleted('comment'));
+        }
 
         $comment->delete();
 

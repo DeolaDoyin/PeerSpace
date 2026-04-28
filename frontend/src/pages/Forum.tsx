@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from '@/api/axios';
 import BottomNav from "@/components/BottomNav";
@@ -40,6 +41,11 @@ interface Post {
   is_hidden?: boolean;
   is_followed?: boolean;
   is_pinned: boolean;
+  user_id: number;
+  creator?: {
+    id: number;
+    name: string;
+  };
 }
 
 interface PaginatedResponse {
@@ -64,6 +70,7 @@ interface PaginatedResponse {
 
 const Forum = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | number>("All");
 
   // Fetch Current User for Roles
@@ -148,6 +155,16 @@ const Forum = () => {
       await queryClient.invalidateQueries({ queryKey: ['forum-posts'] });
     } catch (e) {
       console.error("Failed to delete", e);
+    }
+  };
+
+  const handleStartChat = async (userId: number, peerName: string) => {
+    if (!user || user.id === userId) return;
+    try {
+      const { data } = await api.post("/api/chats", { user_id: userId });
+      navigate(`/chat/${data.id}`, { state: { peerName } });
+    } catch (e) {
+      console.error("Could not start chat", e);
     }
   };
 
@@ -275,6 +292,24 @@ const Forum = () => {
           <React.Fragment key={i}>
             {page.data.map((post: Post) => (
               <Card key={post.id} className="p-4 hover:shadow-md transition-shadow border-border">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                     {post.name?.[0] || "A"}
+                  </div>
+                  <div 
+                    className="flex flex-col cursor-pointer group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      if (post.user_id) handleStartChat(post.user_id, post.name || "Peer");
+                    }}
+                  >
+                    <span className="text-xs font-semibold text-foreground group-hover:underline">{post.name || "Anonymous"}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {post.created_at ? formatDistanceToNow(new Date(post.created_at)) + " ago" : "Recently"}
+                    </span>
+                  </div>
+                </div>
                 <Link to={`/posts/${post.slug}`} className="block cursor-pointer">
                   <h3 className="font-semibold text-foreground mb-1">
                     {Boolean(post.is_pinned) && "📌 "}{post.title}
@@ -317,35 +352,38 @@ const Forum = () => {
                           <EyeOff className="h-4 w-4 mr-2" />
                           <span>Hide</span>
                         </DropdownMenuItem>
-                        
-                        <DropdownMenuSeparator />
+                        {(user?.role !== 'admin' && user?.role !== 'moderator') && (
+                          <>
+                            <DropdownMenuSeparator />
 
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                              <Flag className="h-4 w-4 mr-2" />
-                              <span>Report</span>
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="max-w-xs sm:max-w-md">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Report this post?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Is this post violating our community guidelines? Our moderators will review it shortly. 
-                                This action is anonymous.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleReport(post.id)} 
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Report
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                  <Flag className="h-4 w-4 mr-2" />
+                                  <span>Report</span>
+                                </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="max-w-xs sm:max-w-md">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Report this post?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Is this post violating our community guidelines? Our moderators will review it shortly. 
+                                    This action is anonymous.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleReport(post.id)} 
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Report
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
 
                         {(user?.role === 'admin' || user?.role === 'moderator') && (
                           <>
@@ -354,10 +392,13 @@ const Forum = () => {
                               <Pin className="h-4 w-4 mr-2" />
                               <span>{post.is_pinned ? 'Unpin' : 'Pin'}</span>
                             </DropdownMenuItem>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                  <Trash2 className="h-4 w-4 mr-2" />
+                          </>
+                        )}
+                        {(user?.role === 'admin' || user?.role === 'moderator' || user?.id === post.user_id) && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                <Trash2 className="h-4 w-4 mr-2" />
                                   <span>Delete</span>
                                 </DropdownMenuItem>
                               </AlertDialogTrigger>

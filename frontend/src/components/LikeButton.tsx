@@ -45,7 +45,7 @@ const LikeButton = ({ itemId, type, initialCount, initialIsLiked }: LikeButtonPr
       onClick={handleLike}
       disabled={loading}
       className={cn(
-        "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all active:scale-95",
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95",
         isLiked 
           ? "text-rose-500 bg-rose-50/50" 
           : "text-muted-foreground hover:text-rose-400 hover:bg-rose-50/30"

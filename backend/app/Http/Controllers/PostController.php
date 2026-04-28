@@ -26,6 +26,7 @@ class PostController extends Controller
         // 3. Sort by pinned first, then latest
         $posts = $query->with(['creator', 'category'])
             ->withCount('comments')
+            ->withCount('likes')
             ->whereDoesntHave('hiddenByUsers', function ($q) {
                 $q->where('user_id', auth()->id());
             })
@@ -33,6 +34,9 @@ class PostController extends Controller
                 $q->where('user_id', auth()->id());
             }])
             ->withExists(['followedByUsers as is_followed' => function ($q) {
+                $q->where('user_id', auth()->id());
+            }])
+            ->withExists(['likes as is_liked' => function ($q) {
                 $q->where('user_id', auth()->id());
             }])
             ->orderByDesc('is_pinned')
@@ -48,10 +52,14 @@ class PostController extends Controller
         return response()->json(
             $post->load(['creator', 'category'])
                  ->loadCount('comments')
+                 ->loadCount('likes')
                  ->loadExists(['savedByUsers as is_saved' => function ($q) {
                      $q->where('user_id', auth()->id());
                  }])
                  ->loadExists(['followedByUsers as is_followed' => function ($q) {
+                     $q->where('user_id', auth()->id());
+                 }])
+                 ->loadExists(['likes as is_liked' => function ($q) {
                      $q->where('user_id', auth()->id());
                  }])
         );
@@ -124,6 +132,9 @@ class PostController extends Controller
             'reportable_type' => Post::class,
         ]);
 
+        $moderators = \App\Models\User::whereIn('role', ['admin', 'moderator'])->get();
+        \Illuminate\Support\Facades\Notification::send($moderators, new \App\Notifications\ContentReported('post', $post->id, auth()->user()));
+
         return response()->json(['message' => 'Report submitted to moderators.']);
     } catch (\Exception $e) {
         // This will return the actual error message to your console log
@@ -165,6 +176,10 @@ class PostController extends Controller
     {
         // Authorize the deletion via policy (owner or admin)
         $this->authorize('delete', $post);
+
+        if ($post->user_id !== auth()->id()) {
+            $post->creator->notify(new \App\Notifications\ContentDeleted('post'));
+        }
 
         $post->delete();
 

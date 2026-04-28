@@ -1,4 +1,4 @@
-import { Bell, Check, Loader2 } from "lucide-react";
+import { Bell, Check, Loader2, Heart, MessageCircle, Flag, Trash2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/axios";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +11,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getEcho } from "@/lib/echo";
+import { toast } from "sonner";
 
 interface DbNotification {
   id: string;
@@ -31,6 +33,14 @@ const NotificationBell = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
+  const { data: user } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/user");
+      return data;
+    },
+  });
+
   const { data: notifications, isLoading, refetch } = useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
@@ -44,16 +54,43 @@ const NotificationBell = () => {
     refetchOnWindowFocus: true,
   });
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const echo = getEcho();
+    if (!echo) return;
+
+    const channel = echo.private(`App.Models.User.${user.id}`);
+    channel.notification((notification: any) => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      
+      // Optionally show a toast for new notifications if the sheet isn't open
+      if (!isOpen && notification.data?.message) {
+        toast(notification.data.message);
+      }
+    });
+
+    return () => {
+      echo.leave(`App.Models.User.${user.id}`);
+    };
+  }, [user?.id, queryClient, isOpen]);
+
   const unreadCount = notifications?.length || 0;
 
-  const handleRead = async (id: string, slug: string | undefined) => {
-    if (!slug) return;
+  const handleRead = async (id: string, notifData: any) => {
     try {
       api.post(`/api/notifications/${id}/read`).then(() => {
         queryClient.invalidateQueries({ queryKey: ["notifications"] });
       });
       setIsOpen(false);
-      navigate(`/posts/${slug}`);
+      
+      if (notifData?.type === "content_deleted") {
+        toast.info("This content has been removed.");
+        return;
+      }
+
+      if (notifData?.post_slug) {
+        navigate(`/posts/${notifData.post_slug}`);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -66,6 +103,13 @@ const NotificationBell = () => {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const getIcon = (type?: string) => {
+    if (type === "like" || type === "comment_like") return <Heart className="h-4 w-4" />;
+    if (type === "content_reported") return <Flag className="h-4 w-4 text-destructive" />;
+    if (type === "content_deleted") return <Trash2 className="h-4 w-4" />;
+    return <MessageCircle className="h-4 w-4" />;
   };
 
   return (
@@ -119,14 +163,14 @@ const NotificationBell = () => {
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter")
-                    void handleRead(notif.id, notif.data?.post_slug);
+                    void handleRead(notif.id, notif.data);
                 }}
-                onClick={() => void handleRead(notif.id, notif.data?.post_slug)}
+                onClick={() => void handleRead(notif.id, notif.data)}
                 className="p-3 bg-muted/50 hover:bg-muted rounded-lg border border-border cursor-pointer transition-colors"
               >
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    {notif.data?.type === "like" ? "❤️" : "💬"}
+                    {getIcon(notif.data?.type)}
                   </div>
                   <div>
                     <p className="text-xs text-foreground font-medium leading-tight">

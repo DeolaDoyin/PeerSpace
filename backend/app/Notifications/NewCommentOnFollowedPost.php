@@ -9,7 +9,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class NewComment extends Notification implements ShouldBroadcast
+class NewCommentOnFollowedPost extends Notification implements ShouldBroadcast
 {
     use Queueable;
 
@@ -34,8 +34,8 @@ class NewComment extends Notification implements ShouldBroadcast
             'post_slug' => $this->post->slug,
             'post_title' => $this->post->title,
             'commenter_name' => $this->commenter->name,
-            'type' => 'comment',
-            'message' => "{$this->commenter->name} commented on your post."
+            'type' => 'followed_post_comment',
+            'message' => "{$this->commenter->name} commented on a post you follow."
         ];
     }
 
