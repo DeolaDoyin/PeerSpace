@@ -26,7 +26,7 @@ export interface ChatListRow {
 
 const Chats = () => {
   const navigate = useNavigate();
-  const [newPeerId, setNewPeerId] = useState("");
+  const [newPeerName, setNewPeerName] = useState(""); 
   const [starting, setStarting] = useState(false);
 
   const CHATS_POLL_MS = 60_000;
@@ -68,29 +68,30 @@ const Chats = () => {
   };
 
   const startChat = async () => {
-    const id = Number.parseInt(newPeerId.trim(), 10);
-    if (!Number.isFinite(id) || id <= 0) return;
-    setStarting(true);
-    try {
-      const { data } = await api.post<ChatListRow>("/api/chats", {
-        user_id: id,
+  const name = newPeerName.trim();
+  if (!name) return;
+  
+  setStarting(true);
+  try {
+    const { data } = await api.post<ChatListRow>("/api/chats", { username: name });
+    setNewPeerName("");
+    await refetch();
+    navigate(`/chat/${data.id}`, { state: { peerName: data.peer?.name ?? name } });
+  } catch (err: any) {
+    // Check if the backend returned a 422 (Validation failed/User not found)
+    if (err.response?.status === 422) {
+      toast.error("User not found", {
+        description: `We couldn't find a member named "${name}".`,
       });
-      setNewPeerId("");
-      await refetch();
-      navigate(`/chat/${data.id}`, {
-        state: { peerName: data.peer?.name ?? "Peer" },
+    } else {
+      toast.error("Connection error", {
+        description: "Please try again later.",
       });
-    } catch (e) {
-      const err = e as any;
-      const msg =
-        extractErrorMessage(err) || "Could not start chat. Please try again.";
-      try {
-        notify.error(msg);
-      } catch {}
-    } finally {
-      setStarting(false);
     }
-  };
+  } finally {
+    setStarting(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -132,23 +133,17 @@ const Chats = () => {
       </header>
 
       <div className="px-4 py-3 border-b border-border bg-card/80 space-y-2">
-        <p className="text-xs text-muted-foreground">
-          Start a chat with another member (user ID)
-        </p>
+        <p className="text-xs text-muted-foreground">Start a chat with another member</p>
         <div className="flex gap-2">
           <input
-            type="number"
+            type="text"
             min={1}
-            value={newPeerId}
-            onChange={(e) => setNewPeerId(e.target.value)}
-            placeholder="User ID"
+            value={newPeerName}
+            onChange={(e) => setNewPeerName(e.target.value)}
+            placeholder="Enter Username"
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
-          <Button
-            type="button"
-            onClick={() => void startChat()}
-            disabled={starting || !newPeerId.trim()}
-          >
+          <Button type="button" onClick={() => void startChat()} disabled={starting || !newPeerName.trim()}>
             {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Go"}
           </Button>
         </div>
@@ -191,7 +186,7 @@ const Chats = () => {
           ))}
         {!isLoading && !isError && chats.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-16 px-4">
-            No conversations yet. Enter another user&apos;s ID above to start.
+            No conversations yet. Enter another user&apos;s Username above to start.
           </p>
         )}
       </div>

@@ -40,20 +40,17 @@ const queryClient = new QueryClient({
 // eslint-disable-next-line react-refresh/only-export-components
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ErrorBoundary>
-      <TooltipProvider>
-        <Sonner />
-        <BrowserRouter>
-          <Suspense
-            fallback={
-              <div className="min-h-screen flex items-center justify-center">
-                Loading...
-              </div>
-            }
-          >
-            <Routes>
-              {/* Landing page */}
-              <Route path="/" element={<LandingPage />} />
+    <TooltipProvider>
+      <Sonner 
+        position="bottom-center" 
+        richColors 
+        closeButton
+      />
+      <BrowserRouter>
+        <Routes>
+          {/* Landing page */}
+          <Route path="/" element={<LandingPage />} />
+
 
               {/* Auth page */}
               <Route

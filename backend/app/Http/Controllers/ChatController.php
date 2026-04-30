@@ -52,11 +52,12 @@ class ChatController extends Controller
     public function store(Request $request, ChatService $chats): JsonResponse
     {
         $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'username' => ['required', 'string', 'exists:users,name'],
         ]);
+            $targetUser = \App\Models\User::where('name', $data['username'])->first();
 
         try {
-            [$chat, $created] = $chats->findOrCreateDirectChat($request->user(), (int) $data['user_id']);
+            [$chat, $created] = $chats->findOrCreateDirectChat($request->user(), (int) $targetUser->id);
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
