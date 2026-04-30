@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/api/axios";
+import { notify } from "@/lib/notify";
+import { extractErrorMessage } from "@/lib/errors";
 
 const DebugPage = () => {
   const [status, setStatus] = useState("Initializing...");
@@ -15,14 +17,13 @@ const DebugPage = () => {
       })
       .catch((err) => {
         setStatus("Connection Failed.");
-        // This will tell us if it's a CORS error, 404, or 500
-        setError(
-          err.message +
-            (err.response
-              ? ` (Status: ${err.response.status})`
-              : " (Network Error)"),
-        );
-        console.error(err);
+        const e = err as any;
+        const msg =
+          extractErrorMessage(e) || e?.message || "Connection failed.";
+        setError(msg);
+        try {
+          notify.error(msg);
+        } catch {}
       });
   }, []);
 

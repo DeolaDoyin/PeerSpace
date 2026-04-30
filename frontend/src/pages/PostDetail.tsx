@@ -2,10 +2,22 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/axios";
+import { notify } from "@/lib/notify";
+import { extractErrorMessage } from "@/lib/errors";
 import { getEcho } from "@/lib/echo";
-import { 
-  ArrowLeft, Loader2, MessageCircle, Trash2, Flag, 
-  MoreHorizontal, Bookmark, EyeOff, Bell, Minus, Plus, Pin 
+import {
+  ArrowLeft,
+  Loader2,
+  MessageCircle,
+  Trash2,
+  Flag,
+  MoreHorizontal,
+  Bookmark,
+  EyeOff,
+  Bell,
+  Minus,
+  Plus,
+  Pin,
 } from "lucide-react";
 import LikeButton from "@/components/LikeButton";
 import { Button } from "@/components/ui/button";
@@ -62,9 +74,9 @@ interface PostCacheRow {
 
 const buildCommentTree = (comments: CommentRow[]): CommentNode[] => {
   const map = new Map<number, CommentNode>();
-  comments.forEach(c => map.set(c.id, { ...c, replies: [] }));
+  comments.forEach((c) => map.set(c.id, { ...c, replies: [] }));
   const roots: CommentNode[] = [];
-  comments.forEach(c => {
+  comments.forEach((c) => {
     const node = map.get(c.id)!;
     if (c.parent_id && map.has(c.parent_id)) {
       map.get(c.parent_id)!.replies.push(node);
@@ -84,151 +96,227 @@ interface CommentItemProps {
   commentText: string;
   setCommentText: (s: string) => void;
   handleCommentSubmit: (e: React.FormEvent, parentId: number | null) => void;
-  openReportModal: (id: number, type: 'post' | 'comment') => void;
+  openReportModal: (id: number, type: "post" | "comment") => void;
   canDeleteComment: (c: CommentRow) => boolean;
   handleDeleteComment: (id: number) => void;
   handleStartChat: (id: number, name: string) => void;
   submitting: boolean;
   currentUser: any;
+  commentError: string;
+  setCommentError: (s: string) => void;
 }
 
 const CommentItem = ({
-  node, depth = 0, replyingToCommentId, setReplyingToCommentId, setIsReplyingToPost,
-  commentText, setCommentText, handleCommentSubmit, openReportModal, canDeleteComment, handleDeleteComment, handleStartChat, submitting, currentUser
+  node,
+  depth = 0,
+  replyingToCommentId,
+  setReplyingToCommentId,
+  setIsReplyingToPost,
+  commentText,
+  setCommentText,
+  handleCommentSubmit,
+  openReportModal,
+  canDeleteComment,
+  handleDeleteComment,
+  handleStartChat,
+  submitting,
+  currentUser,
+  commentError,
+  setCommentError,
 }: CommentItemProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isReplying = replyingToCommentId === node.id;
 
   return (
-    <div className={`flex flex-col ${depth > 0 ? 'mt-2' : 'mt-4'}`}>
+    <div className={`flex flex-col ${depth > 0 ? "mt-2" : "mt-4"}`}>
       <div className="flex">
         {/* Thread Line and Collapse toggle */}
         <div className="flex flex-col items-center mr-2 w-6 shrink-0">
           <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary mb-1">
-             {node.user?.name?.[0] || "A"}
+            {node.user?.name?.[0] || "A"}
           </div>
-          
-          <button 
-            onClick={() => setIsCollapsed(!isCollapsed)} 
+
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
             className="hover:bg-muted p-0.5 rounded text-muted-foreground z-10"
             title={isCollapsed ? "Expand comment" : "Collapse comment"}
+            aria-pressed={isCollapsed}
+            aria-label={isCollapsed ? "Expand comment" : "Collapse comment"}
           >
-              {isCollapsed ? <Plus size={14}/> : <Minus size={14} />}
+            {isCollapsed ? <Plus size={14} /> : <Minus size={14} />}
           </button>
-          {!isCollapsed && <div className="w-0.5 h-full bg-border mt-1 group-hover:bg-primary/50 transition-colors"></div>}
+          {!isCollapsed && (
+            <div className="w-0.5 h-full bg-border mt-1 group-hover:bg-primary/50 transition-colors"></div>
+          )}
         </div>
 
         <div className="flex-1 pb-2 min-w-0">
-           <div className="flex items-center gap-2 mb-1">
-             <span 
-                className="text-xs font-semibold text-foreground cursor-pointer hover:underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if (node.user?.id) handleStartChat(node.user.id, node.user.name);
-                }}
-             >
-               {node.user?.name || "Anonymous"}
-             </span>
-             <span className="text-[10px] text-muted-foreground">• {node.created_at ? formatDistanceToNow(new Date(node.created_at)) + " ago" : ""}</span>
-           </div>
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className="text-xs font-semibold text-foreground cursor-pointer hover:underline"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (node.user?.id)
+                  handleStartChat(node.user.id, node.user.name);
+              }}
+            >
+              {node.user?.name || "Anonymous"}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              •{" "}
+              {node.created_at
+                ? formatDistanceToNow(new Date(node.created_at)) + " ago"
+                : ""}
+            </span>
+          </div>
 
-           {!isCollapsed ? (
-             <>
-                <p className="text-sm text-foreground mb-1 whitespace-pre-wrap">{node.content}</p>
-                
-                <div className="flex items-center gap-1 text-muted-foreground mt-1">
-                   <LikeButton itemId={node.id} type="comment" initialCount={node.likes_count ?? 0} initialIsLiked={node.is_liked ?? false} />
-                   <button 
-                      onClick={() => {
-                        setReplyingToCommentId(isReplying ? null : node.id);
-                        setIsReplyingToPost(false);
-                        setCommentText("");
-                      }} 
-                      className="flex items-center gap-1 text-xs font-medium px-2 py-1 hover:bg-muted rounded-full transition-colors"
-                   >
-                      <MessageCircle size={14}/> Reply
-                   </button>
-                   
-                   <DropdownMenu>
-                     <DropdownMenuTrigger asChild>
-                       <button className="p-1 rounded-full hover:bg-muted transition-colors text-muted-foreground">
-                         <MoreHorizontal className="h-4 w-4" />
-                       </button>
-                     </DropdownMenuTrigger>
-                     <DropdownMenuContent align="start" className="w-40">
-                       {(currentUser?.role !== 'admin' && currentUser?.role !== 'moderator') && (
-                         <DropdownMenuItem onClick={() => openReportModal(node.id, 'comment')}>
-                           <Flag className="h-4 w-4 mr-2" /> Report
-                         </DropdownMenuItem>
-                       )}
-                       {canDeleteComment(node) && (
-                         <>
-                           {(currentUser?.role !== 'admin' && currentUser?.role !== 'moderator') && <DropdownMenuSeparator />}
-                           <DropdownMenuItem onClick={() => handleDeleteComment(node.id)} className="text-destructive">
-                             <Trash2 className="h-4 w-4 mr-2" /> Delete
-                           </DropdownMenuItem>
-                         </>
-                       )}
-                     </DropdownMenuContent>
-                   </DropdownMenu>
+          {!isCollapsed ? (
+            <>
+              <p className="text-sm text-foreground mb-1 whitespace-pre-wrap">
+                {node.content}
+              </p>
+
+              <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                <LikeButton
+                  itemId={node.id}
+                  type="comment"
+                  initialCount={node.likes_count ?? 0}
+                  initialIsLiked={node.is_liked ?? false}
+                />
+                <button
+                  onClick={() => {
+                    setReplyingToCommentId(isReplying ? null : node.id);
+                    setIsReplyingToPost(false);
+                    setCommentText("");
+                  }}
+                  className="flex items-center gap-1 text-xs font-medium px-2 py-1 hover:bg-muted rounded-full transition-colors"
+                >
+                  <MessageCircle size={14} /> Reply
+                </button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="p-1 rounded-full hover:bg-muted transition-colors text-muted-foreground"
+                      aria-label="Comment options"
+                      title="Comment options"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-40">
+                    {currentUser?.role !== "admin" &&
+                      currentUser?.role !== "moderator" && (
+                        <DropdownMenuItem
+                          onClick={() => openReportModal(node.id, "comment")}
+                        >
+                          <Flag className="h-4 w-4 mr-2" /> Report
+                        </DropdownMenuItem>
+                      )}
+                    {canDeleteComment(node) && (
+                      <>
+                        {currentUser?.role !== "admin" &&
+                          currentUser?.role !== "moderator" && (
+                            <DropdownMenuSeparator />
+                          )}
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteComment(node.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {isReplying && (
+                <div className="mt-3 pr-4">
+                  <form
+                    onSubmit={(e) => handleCommentSubmit(e, node.id)}
+                    className="space-y-2"
+                  >
+                    <textarea
+                      autoFocus
+                      value={commentText}
+                      onChange={(e) => {
+                        setCommentText(e.target.value);
+                        setCommentError("");
+                      }}
+                      placeholder={`Replying to ${node.user?.name || "Anonymous"}...`}
+                      rows={2}
+                      className="w-full bg-card border border-border rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    />
+                    {commentError && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {commentError}
+                      </p>
+                    )}
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setReplyingToCommentId(null)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={submitting || !commentText.trim()}
+                        className="rounded-full"
+                      >
+                        {submitting ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          "Reply"
+                        )}
+                      </Button>
+                    </div>
+                  </form>
                 </div>
+              )}
 
-                {isReplying && (
-                  <div className="mt-3 pr-4">
-                     <form onSubmit={(e) => handleCommentSubmit(e, node.id)} className="space-y-2">
-                       <textarea
-                         autoFocus
-                         value={commentText}
-                         onChange={(e) => setCommentText(e.target.value)}
-                         placeholder={`Replying to ${node.user?.name || "Anonymous"}...`}
-                         rows={2}
-                         className="w-full bg-card border border-border rounded-lg p-3 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
-                       />
-                       <div className="flex justify-end gap-2">
-                         <Button type="button" variant="ghost" size="sm" onClick={() => setReplyingToCommentId(null)}>Cancel</Button>
-                         <Button type="submit" size="sm" disabled={submitting || !commentText.trim()} className="rounded-full">
-                           {submitting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reply"}
-                         </Button>
-                       </div>
-                     </form>
-                  </div>
-                )}
-
-                {/* Nested Replies */}
-                {node.replies.length > 0 && (
-                   <div className="mt-1">
-                      {node.replies.map(r => (
-                        <CommentItem 
-                          key={r.id} 
-                          node={r} 
-                          depth={depth + 1} 
-                          replyingToCommentId={replyingToCommentId}
-                          setReplyingToCommentId={setReplyingToCommentId}
-                          setIsReplyingToPost={setIsReplyingToPost}
-                          commentText={commentText}
-                          setCommentText={setCommentText}
-                          handleCommentSubmit={handleCommentSubmit}
-                          openReportModal={openReportModal}
-                          canDeleteComment={canDeleteComment}
-                          handleDeleteComment={handleDeleteComment}
-                          handleStartChat={handleStartChat}
-                          submitting={submitting}
-                          currentUser={currentUser}
-                        />
-                      ))}
-                   </div>
-                )}
-             </>
-           ) : (
-              <span className="text-xs text-muted-foreground italic line-clamp-1 opacity-70">Comment collapsed</span>
-           )}
+              {/* Nested Replies */}
+              {node.replies.length > 0 && (
+                <div className="mt-1">
+                  {node.replies.map((r) => (
+                    <CommentItem
+                      key={r.id}
+                      node={r}
+                      depth={depth + 1}
+                      replyingToCommentId={replyingToCommentId}
+                      setReplyingToCommentId={setReplyingToCommentId}
+                      setIsReplyingToPost={setIsReplyingToPost}
+                      commentText={commentText}
+                      setCommentText={setCommentText}
+                      handleCommentSubmit={handleCommentSubmit}
+                      openReportModal={openReportModal}
+                      canDeleteComment={canDeleteComment}
+                      handleDeleteComment={handleDeleteComment}
+                      handleStartChat={handleStartChat}
+                      submitting={submitting}
+                      currentUser={currentUser}
+                      commentError={commentError}
+                      setCommentError={setCommentError}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground italic line-clamp-1 opacity-70">
+              Comment collapsed
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 };
-
 
 const PostDetail = () => {
   const { slug } = useParams();
@@ -236,10 +324,20 @@ const PostDetail = () => {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [reportData, setReportData] = useState({ isOpen: false, id: 0, type: 'post' as 'post' | 'comment', reason: '' });
-  
+  const [commentError, setCommentError] = useState("");
+  const [reportData, setReportData] = useState({
+    isOpen: false,
+    id: 0,
+    type: "post" as "post" | "comment",
+    reason: "",
+  });
+  const [reportError, setReportError] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+
   const [isReplyingToPost, setIsReplyingToPost] = useState(false);
-  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(null);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(
+    null,
+  );
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -249,7 +347,12 @@ const PostDetail = () => {
     },
   });
 
-  const { data: post, isLoading, error, refetch } = useQuery({
+  const {
+    data: post,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["post", slug],
     queryFn: async () => {
       const { data } = await api.get(`/api/posts/${slug}`);
@@ -266,7 +369,10 @@ const PostDetail = () => {
     enabled: !!post?.id,
   });
 
-  const commentTree = useMemo(() => buildCommentTree(comments as CommentRow[]), [comments]);
+  const commentTree = useMemo(
+    () => buildCommentTree(comments as CommentRow[]),
+    [comments],
+  );
 
   useEffect(() => {
     const postId = post?.id;
@@ -304,7 +410,7 @@ const PostDetail = () => {
             return list;
           }
           return [...list, next];
-        }
+        },
       );
 
       queryClient.setQueryData<PostCacheRow>(["post", slugKey], (prev) =>
@@ -313,7 +419,7 @@ const PostDetail = () => {
               ...prev,
               comments_count: (prev.comments_count ?? 0) + 1,
             }
-          : prev
+          : prev,
       );
 
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -324,20 +430,41 @@ const PostDetail = () => {
     };
   }, [post?.id, slug, user?.id, queryClient]);
 
-  const handleCommentSubmit = async (e: React.FormEvent, parentId: number | null = null) => {
+  const handleCommentSubmit = async (
+    e: React.FormEvent,
+    parentId: number | null = null,
+  ) => {
     e.preventDefault();
     if (!comment.trim() || !post?.id) return;
 
     setSubmitting(true);
+    setCommentError("");
     try {
-      await api.post(`/api/posts/${post.id}/comments`, { content: comment, parent_id: parentId });
+      await api.post(`/api/posts/${post.id}/comments`, {
+        content: comment,
+        parent_id: parentId,
+      });
       setComment("");
       setIsReplyingToPost(false);
       setReplyingToCommentId(null);
-      await queryClient.invalidateQueries({ queryKey: ["post-comments", post.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ["post-comments", post.id],
+      });
       await queryClient.invalidateQueries({ queryKey: ["post", slug] });
     } catch (err) {
-      console.error("Failed to post comment");
+      const e = err as any;
+      if (e?.response?.status === 422 && e.response.data?.errors) {
+        const first = Object.values(e.response.data.errors)[0];
+        setCommentError(
+          Array.isArray(first) ? String(first[0]) : String(first),
+        );
+      } else {
+        const msg = extractErrorMessage(e) || "Failed to post comment";
+        setCommentError(msg);
+        try {
+          notify.error(msg);
+        } catch {}
+      }
     } finally {
       setSubmitting(false);
     }
@@ -347,24 +474,50 @@ const PostDetail = () => {
     if (!post?.id) return;
     try {
       await api.delete(`/api/comments/${commentId}`);
-      await queryClient.invalidateQueries({ queryKey: ["post-comments", post.id] });
+      await queryClient.invalidateQueries({
+        queryKey: ["post-comments", post.id],
+      });
       await queryClient.invalidateQueries({ queryKey: ["post", slug] });
     } catch (err) {
-      console.error("Failed to delete comment");
+      const e = err as any;
+      const msg =
+        extractErrorMessage(e) || "Failed to delete comment. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
     }
   };
 
-  const openReportModal = (id: number, type: 'post' | 'comment') => {
-    setReportData({ isOpen: true, id, type, reason: '' });
+  const openReportModal = (id: number, type: "post" | "comment") => {
+    setReportData({ isOpen: true, id, type, reason: "" });
   };
 
   const submitReport = async () => {
     if (!reportData.reason.trim()) return;
+    setReportError("");
+    setReportSubmitting(true);
     try {
-      await api.post('/api/reports', { reportable_id: reportData.id, reportable_type: reportData.type, reason: reportData.reason });
-      setReportData({ isOpen: false, id: 0, type: 'post', reason: '' });
-    } catch (e) {
-      console.error("Failed to submit report", e);
+      await api.post("/api/reports", {
+        reportable_id: reportData.id,
+        reportable_type: reportData.type,
+        reason: reportData.reason,
+      });
+      setReportData({ isOpen: false, id: 0, type: "post", reason: "" });
+      notify.success("Report submitted");
+    } catch (err) {
+      const e = err as any;
+      if (e?.response?.status === 422 && e.response.data?.errors) {
+        const first = Object.values(e.response.data.errors)[0];
+        setReportError(Array.isArray(first) ? String(first[0]) : String(first));
+      } else {
+        const msg = extractErrorMessage(e) || "Failed to submit report";
+        setReportError(msg);
+        try {
+          notify.error(msg);
+        } catch {}
+      }
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -379,8 +532,13 @@ const PostDetail = () => {
     try {
       await api.post(`/api/posts/${post?.id}/follow`);
       refetch();
-    } catch (e) {
-      console.error("Failed to follow", e);
+    } catch (err) {
+      const e = err as any;
+      const msg =
+        extractErrorMessage(e) || "Failed to follow post. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
     }
   };
 
@@ -388,8 +546,13 @@ const PostDetail = () => {
     try {
       await api.post(`/api/posts/${post?.id}/save`);
       refetch();
-    } catch (e) {
-      console.error("Failed to save", e);
+    } catch (err) {
+      const e = err as any;
+      const msg =
+        extractErrorMessage(e) || "Failed to save post. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
     }
   };
 
@@ -397,8 +560,13 @@ const PostDetail = () => {
     try {
       await api.post(`/api/posts/${post?.id}/hide`);
       navigate(-1);
-    } catch (e) {
-      console.error("Failed to hide", e);
+    } catch (err) {
+      const e = err as any;
+      const msg =
+        extractErrorMessage(e) || "Failed to hide post. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
     }
   };
 
@@ -406,17 +574,27 @@ const PostDetail = () => {
     try {
       await api.patch(`/api/posts/${post?.id}/pin`);
       refetch();
-    } catch (e) {
-      console.error("Failed to pin", e);
+    } catch (err) {
+      const e = err as any;
+      const msg =
+        extractErrorMessage(e) || "Failed to pin/unpin post. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
     }
   };
 
   const handleDeletePost = async () => {
     try {
       await api.delete(`/api/posts/${post?.id}`);
-      navigate('/');
-    } catch (e) {
-      console.error("Failed to delete post", e);
+      navigate("/");
+    } catch (err) {
+      const e = err as any;
+      const msg =
+        extractErrorMessage(e) || "Failed to delete post. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
     }
   };
 
@@ -436,10 +614,32 @@ const PostDetail = () => {
       </div>
     );
 
+  const handleStartChat = async (userId: number, peerName: string) => {
+    if (!user || user.id === userId) return;
+    try {
+      const { data } = await api.post("/api/chats", { user_id: userId });
+      navigate(`/chat/${data.id}`, { state: { peerName } });
+    } catch (err) {
+      const e = err as any;
+      // Starting a chat is a UX nicety; surface a friendly message
+      const msg =
+        extractErrorMessage(e) || "Could not start chat. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border px-4 py-3 z-10 flex items-center gap-3">
-        <button type="button" onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="p-2 -ml-2 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          aria-label="Go back"
+          title="Go back"
+        >
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-lg font-semibold text-foreground">Post</h1>
@@ -452,64 +652,86 @@ const PostDetail = () => {
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                 {post.creator?.name?.[0] || "A"}
+                {post.creator?.name?.[0] || "A"}
               </div>
-              <div 
+              <div
                 className="flex flex-col cursor-pointer group"
                 onClick={() => {
-                  if (post.creator?.id) handleStartChat(post.creator.id, post.creator.name || "Peer");
+                  if (post.creator?.id)
+                    handleStartChat(
+                      post.creator.id,
+                      post.creator.name || "Peer",
+                    );
                 }}
               >
-                <span className="text-sm font-semibold text-foreground group-hover:underline">{post.creator?.name || "Anonymous"}</span>
+                <span className="text-sm font-semibold text-foreground group-hover:underline">
+                  {post.creator?.name || "Anonymous"}
+                </span>
                 <span className="text-[10px] text-muted-foreground">
-                  {post.created_at ? formatDistanceToNow(new Date(post.created_at)) + " ago" : "Recently"}
+                  {post.created_at
+                    ? formatDistanceToNow(new Date(post.created_at)) + " ago"
+                    : "Recently"}
                 </span>
               </div>
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground focus:outline-none">
+                <button
+                  className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground focus:outline-none"
+                  aria-label="Post options"
+                  title="Post options"
+                >
                   <MoreHorizontal className="h-5 w-5" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={handleFollow}>
                   <Bell className="h-4 w-4 mr-2" />
-                  <span>{post.is_followed ? 'Unfollow Post' : 'Follow Post'}</span>
+                  <span>
+                    {post.is_followed ? "Unfollow Post" : "Follow Post"}
+                  </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSave}>
                   <Bookmark className="h-4 w-4 mr-2" />
-                  <span>{post.is_saved ? 'Unsave' : 'Save'}</span>
+                  <span>{post.is_saved ? "Unsave" : "Save"}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleHide}>
                   <EyeOff className="h-4 w-4 mr-2" />
                   <span>Hide</span>
                 </DropdownMenuItem>
-                
-                {(user?.role !== 'admin' && user?.role !== 'moderator') && (
+
+                {user?.role !== "admin" && user?.role !== "moderator" && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => openReportModal(post.id, 'post')} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                    <DropdownMenuItem
+                      onClick={() => openReportModal(post.id, "post")}
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                    >
                       <Flag className="h-4 w-4 mr-2" />
                       <span>Report</span>
                     </DropdownMenuItem>
                   </>
                 )}
 
-                {(user?.role === 'admin' || user?.role === 'moderator') && (
+                {(user?.role === "admin" || user?.role === "moderator") && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handlePin}>
                       <Pin className="h-4 w-4 mr-2" />
-                      <span>{post.is_pinned ? 'Unpin' : 'Pin'}</span>
+                      <span>{post.is_pinned ? "Unpin" : "Pin"}</span>
                     </DropdownMenuItem>
                   </>
                 )}
-                {(user?.role === 'admin' || user?.role === 'moderator' || user?.id === post?.creator?.id) && (
+                {(user?.role === "admin" ||
+                  user?.role === "moderator" ||
+                  user?.id === post?.creator?.id) && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                      <DropdownMenuItem
+                        onSelect={(e) => e.preventDefault()}
+                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                      >
                         <Trash2 className="h-4 w-4 mr-2" />
                         <span>Delete</span>
                       </DropdownMenuItem>
@@ -518,12 +740,16 @@ const PostDetail = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete this post?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the post and all associated comments safely.
+                          This action cannot be undone. This will permanently
+                          delete the post and all associated comments safely.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeletePost} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        <AlertDialogAction
+                          onClick={handleDeletePost}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
                           Delete
                         </AlertDialogAction>
                       </AlertDialogFooter>
@@ -539,7 +765,9 @@ const PostDetail = () => {
             {Boolean(post.is_pinned) && "📌 "}
             {post.title}
           </h2>
-          <p className="text-foreground text-sm whitespace-pre-wrap leading-relaxed mb-4">{post.body}</p>
+          <p className="text-foreground text-sm whitespace-pre-wrap leading-relaxed mb-4">
+            {post.body}
+          </p>
 
           {/* Post Actions Row */}
           <div className="flex items-center gap-3 text-muted-foreground mb-4">
@@ -552,13 +780,13 @@ const PostDetail = () => {
                 initialIsLiked={post.is_liked ?? false}
               />
             </div>
-            
+
             <div className="flex items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1.5 text-xs font-medium">
               <MessageCircle className="h-4 w-4" /> {post.comments_count ?? 0}
             </div>
           </div>
         </div>
-        
+
         {/* Divider */}
         <div className="h-2 w-full bg-muted/30"></div>
 
@@ -567,7 +795,7 @@ const PostDetail = () => {
           {/* Join Conversation Input */}
           <div className="mb-6">
             {!isReplyingToPost ? (
-              <div 
+              <div
                 onClick={() => {
                   setIsReplyingToPost(true);
                   setReplyingToCommentId(null);
@@ -577,19 +805,44 @@ const PostDetail = () => {
                 <span>Join the conversation</span>
               </div>
             ) : (
-              <form onSubmit={(e) => handleCommentSubmit(e, null)} className="space-y-3 bg-muted/10 p-3 rounded-xl border border-border">
+              <form
+                onSubmit={(e) => handleCommentSubmit(e, null)}
+                className="space-y-3 bg-muted/10 p-3 rounded-xl border border-border"
+              >
                 <textarea
                   autoFocus
                   value={comment}
-                  onChange={(e) => setComment(e.target.value)}
+                  onChange={(e) => {
+                    setComment(e.target.value);
+                    setCommentError("");
+                  }}
                   placeholder="What are your thoughts?"
                   rows={3}
                   className="w-full bg-transparent border-none text-foreground resize-none focus:outline-none"
                 />
+                {commentError && (
+                  <p className="text-xs text-red-500 mt-1">{commentError}</p>
+                )}
                 <div className="flex justify-end gap-2 border-t border-border pt-2">
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setIsReplyingToPost(false)}>Cancel</Button>
-                  <Button type="submit" size="sm" disabled={submitting || !comment.trim()} className="rounded-full">
-                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reply"}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsReplyingToPost(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={submitting || !comment.trim()}
+                    className="rounded-full"
+                  >
+                    {submitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Reply"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -602,31 +855,38 @@ const PostDetail = () => {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             )}
-            
-            {!commentsLoading && commentTree.map((node) => (
-              <CommentItem 
-                key={node.id} 
-                node={node}
-                replyingToCommentId={replyingToCommentId}
-                setReplyingToCommentId={setReplyingToCommentId}
-                setIsReplyingToPost={setIsReplyingToPost}
-                commentText={comment}
-                setCommentText={setComment}
-                handleCommentSubmit={handleCommentSubmit}
-                openReportModal={openReportModal}
-                canDeleteComment={canDeleteComment}
-                handleDeleteComment={handleDeleteComment}
-                handleStartChat={handleStartChat}
-                submitting={submitting}
-                currentUser={user}
-              />
-            ))}
-            
+
+            {!commentsLoading &&
+              commentTree.map((node) => (
+                <CommentItem
+                  key={node.id}
+                  node={node}
+                  replyingToCommentId={replyingToCommentId}
+                  setReplyingToCommentId={setReplyingToCommentId}
+                  setIsReplyingToPost={setIsReplyingToPost}
+                  commentText={comment}
+                  setCommentText={setComment}
+                  handleCommentSubmit={handleCommentSubmit}
+                  openReportModal={openReportModal}
+                  canDeleteComment={canDeleteComment}
+                  handleDeleteComment={handleDeleteComment}
+                  handleStartChat={handleStartChat}
+                  submitting={submitting}
+                  currentUser={user}
+                  commentError={commentError}
+                  setCommentError={setCommentError}
+                />
+              ))}
+
             {!commentsLoading && commentTree.length === 0 && (
               <div className="text-center py-12">
                 <MessageCircle className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground font-medium">No comments yet</p>
-                <p className="text-xs text-muted-foreground mt-1">Be the first to share your thoughts!</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  No comments yet
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Be the first to share your thoughts!
+                </p>
               </div>
             )}
           </div>
@@ -634,31 +894,41 @@ const PostDetail = () => {
       </main>
 
       {/* Report Dialog */}
-      <AlertDialog open={reportData.isOpen} onOpenChange={(isOpen) => setReportData(s => ({...s, isOpen}))}>
+      <AlertDialog
+        open={reportData.isOpen}
+        onOpenChange={(isOpen) => setReportData((s) => ({ ...s, isOpen }))}
+      >
         <AlertDialogContent className="sm:max-w-md w-[90vw] rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Report Content</AlertDialogTitle>
             <AlertDialogDescription>
-              Please provide a detailed reason for reporting this content. Our moderation team will review it.
+              Please provide a detailed reason for reporting this content. Our
+              moderation team will review it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
             <textarea
               autoFocus
               value={reportData.reason}
-              onChange={(e) => setReportData(s => ({ ...s, reason: e.target.value }))}
+              onChange={(e) => {
+                setReportData((s) => ({ ...s, reason: e.target.value }));
+                setReportError("");
+              }}
               placeholder="E.g., Spam, harassing, inappropriate..."
               className="w-full min-h-[100px] bg-muted border border-border rounded-md p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
             />
+            {reportError && (
+              <p className="text-xs text-red-500 mt-2">{reportError}</p>
+            )}
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={submitReport} 
-              disabled={!reportData.reason.trim()}
+            <AlertDialogAction
+              onClick={submitReport}
+              disabled={!reportData.reason.trim() || reportSubmitting}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
-              Submit Report
+              {reportSubmitting ? "Submitting..." : "Submit Report"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

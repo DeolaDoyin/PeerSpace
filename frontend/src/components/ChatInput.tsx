@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Plus, Smile, Search, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { notify } from "@/lib/notify";
+import { extractErrorMessage } from "@/lib/errors";
 
 interface ChatInputProps {
   onSend: (message: string) => void | Promise<void>;
@@ -12,8 +14,17 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
 
   const handleSend = async () => {
     if (message.trim() && !disabled) {
-      await onSend(message.trim());
-      setMessage("");
+      try {
+        await onSend(message.trim());
+        setMessage("");
+      } catch (err) {
+        const e = err as any;
+        const msg =
+          extractErrorMessage(e) || "Failed to send message. Please try again.";
+        try {
+          notify.error(msg);
+        } catch {}
+      }
     }
   };
 
@@ -32,7 +43,7 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
       <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
         <Smile className="h-5 w-5" />
       </button>
-      
+
       <div className="flex-1 flex items-center bg-muted rounded-full px-4 py-2">
         <input
           type="text"
@@ -47,7 +58,7 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
           <Search className="h-4 w-4" />
         </button>
       </div>
-      
+
       <button
         type="button"
         onClick={() => void handleSend()}
@@ -56,7 +67,7 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
           "p-2 rounded-full transition-colors",
           message.trim()
             ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground"
+            : "text-muted-foreground",
         )}
       >
         <Send className="h-5 w-5" />

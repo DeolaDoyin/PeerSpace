@@ -77,6 +77,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return response()->json(['success' => true]);
     });
 
+    // Email verification: resend verification email for the authenticated user
+    // Throttle: 6 requests per minute per user (adjust as needed)
+    Route::post('/email/verification-notification', [\App\Http\Controllers\VerificationController::class, 'resend'])
+        ->middleware('throttle:6,1');
+
     // Reports (User)
     Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:post-write');
 
@@ -104,4 +109,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/reports', [ReportController::class, 'index']);
         Route::patch('/reports/{report}/resolve', [ReportController::class, 'resolve']);
     });
+
+    Route::prefix('users/{user}')->group(function () {
+        // Change password - PATCH /settings/users/1/password
+        Route::patch('password', [PasswordController::class, 'update'])
+            ->name('users.password.update');
+    )};
 });

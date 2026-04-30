@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ArrowLeft, Loader2, Paperclip, MoreVertical } from "lucide-react";
 import api from "@/api/axios";
 import { getEcho } from "@/lib/echo";
+import { notify } from "@/lib/notify";
 import MessageBubble from "@/components/MessageBubble";
 import ChatInput from "@/components/ChatInput";
 import AnonAvatar from "@/components/AnonAvatar";
@@ -50,13 +51,14 @@ function toUiMessage(m: ChatMessageApi, currentUserId: number): UiMessage {
     id: String(m.id),
     message: m.body,
     isSent: m.user_id === currentUserId,
-    timestamp: m.created_at
-      ? format(new Date(m.created_at), "p")
-      : "",
+    timestamp: m.created_at ? format(new Date(m.created_at), "p") : "",
   };
 }
 
-function mergeMessageIntoPage(prev: MessagesPage | undefined, incoming: ChatMessageApi): MessagesPage {
+function mergeMessageIntoPage(
+  prev: MessagesPage | undefined,
+  incoming: ChatMessageApi,
+): MessagesPage {
   if (!prev) {
     return {
       data: [incoming],
@@ -82,7 +84,8 @@ const ChatRoom = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const chatIdNum = Number.parseInt(chatId ?? "", 10);
-  const peerNameFromNav = (location.state as { peerName?: string } | null)?.peerName;
+  const peerNameFromNav = (location.state as { peerName?: string } | null)
+    ?.peerName;
 
   const [sending, setSending] = useState(false);
 
@@ -100,7 +103,9 @@ const ChatRoom = () => {
       const { data } = await api.get<ChatListRow[]>("/api/chats");
       return data;
     },
-    enabled: Boolean(user?.id && !peerNameFromNav && Number.isFinite(chatIdNum)),
+    enabled: Boolean(
+      user?.id && !peerNameFromNav && Number.isFinite(chatIdNum),
+    ),
   });
 
   const peerName =
@@ -116,7 +121,9 @@ const ChatRoom = () => {
   } = useQuery({
     queryKey: ["chat-messages", chatIdNum],
     queryFn: async () => {
-      const { data } = await api.get<MessagesPage>(`/api/chats/${chatIdNum}/messages`);
+      const { data } = await api.get<MessagesPage>(
+        `/api/chats/${chatIdNum}/messages`,
+      );
       return data;
     },
     enabled: Boolean(user?.id && Number.isFinite(chatIdNum) && chatIdNum > 0),
@@ -150,7 +157,7 @@ const ChatRoom = () => {
 
       queryClient.setQueryData<MessagesPage | undefined>(
         ["chat-messages", chatIdNum],
-        (prev) => mergeMessageIntoPage(prev, apiRow)
+        (prev) => mergeMessageIntoPage(prev, apiRow),
       );
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     });
@@ -165,26 +172,34 @@ const ChatRoom = () => {
       if (!user?.id || !Number.isFinite(chatIdNum)) return;
       setSending(true);
       try {
-        const { data } = await api.post<ChatMessageApi>(`/api/chats/${chatIdNum}/messages`, {
-          body: text,
-        });
+        const { data } = await api.post<ChatMessageApi>(
+          `/api/chats/${chatIdNum}/messages`,
+          {
+            body: text,
+          },
+        );
         const created: ChatMessageApi = {
           ...data,
           sender: data.sender ?? { id: user.id, name: user.name ?? "You" },
         };
         queryClient.setQueryData<MessagesPage | undefined>(
           ["chat-messages", chatIdNum],
-          (prev) => mergeMessageIntoPage(prev, created)
+          (prev) => mergeMessageIntoPage(prev, created),
         );
         queryClient.invalidateQueries({ queryKey: ["chats"] });
-      } catch {
-        console.error("Failed to send message");
-        throw new Error("send failed");
+      } catch (err) {
+        const e = err as any;
+        const msg = e?.message || "Failed to send message. Please try again.";
+        try {
+          notify.error(msg);
+        } catch {}
+        // Let the input component continue
+        return;
       } finally {
         setSending(false);
       }
     },
-    [chatIdNum, queryClient, user]
+    [chatIdNum, queryClient, user],
   );
 
   const invalid = !Number.isFinite(chatIdNum) || chatIdNum <= 0;
@@ -193,7 +208,11 @@ const ChatRoom = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
         <p className="text-destructive text-sm mb-4">Invalid chat.</p>
-        <button type="button" className="text-primary underline" onClick={() => navigate("/chats")}>
+        <button
+          type="button"
+          className="text-primary underline"
+          onClick={() => navigate("/chats")}
+        >
           Back to chats
         </button>
       </div>
@@ -201,7 +220,7 @@ const ChatRoom = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col">
       <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
         <div className="flex items-center gap-3">
           <button
@@ -214,13 +233,21 @@ const ChatRoom = () => {
 
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <AnonAvatar size="sm" />
-            <h1 className="text-lg font-semibold text-foreground truncate">{peerName}</h1>
+            <h1 className="text-lg font-semibold text-foreground truncate">
+              {peerName}
+            </h1>
           </div>
 
-          <button type="button" className="p-2 hover:bg-muted rounded-full transition-colors">
+          <button
+            type="button"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
+          >
             <Paperclip className="h-5 w-5 text-muted-foreground" />
           </button>
-          <button type="button" className="p-2 hover:bg-muted rounded-full transition-colors">
+          <button
+            type="button"
+            className="p-2 hover:bg-muted rounded-full transition-colors"
+          >
             <MoreVertical className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
@@ -235,7 +262,11 @@ const ChatRoom = () => {
         {isError && (
           <div className="text-center text-destructive text-sm py-8">
             Could not load messages.{" "}
-            <button type="button" className="underline" onClick={() => refetch()}>
+            <button
+              type="button"
+              className="underline"
+              onClick={() => refetch()}
+            >
               Retry
             </button>
           </div>
@@ -248,15 +279,21 @@ const ChatRoom = () => {
               message={msg.message}
               isSent={msg.isSent}
               timestamp={msg.timestamp}
-              showAvatar={!msg.isSent && (index === 0 || messages[index - 1]?.isSent)}
+              showAvatar={
+                !msg.isSent && (index === 0 || messages[index - 1]?.isSent)
+              }
             />
           ))}
         {!isLoading && !isError && messages.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-8">Say hello to start the conversation.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Say hello to start the conversation.
+          </p>
         )}
       </div>
 
-      <ChatInput onSend={handleSend} disabled={sending || isLoading} />
+      <div className="shrink-0">
+        <ChatInput onSend={handleSend} disabled={sending || isLoading} />
+      </div>
     </div>
   );
 };
