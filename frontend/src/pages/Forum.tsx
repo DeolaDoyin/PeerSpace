@@ -116,8 +116,17 @@ const Forum = () => {
   };
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, []);
+  const isDark = theme === "dark";
+  document.documentElement.classList.toggle("dark", isDark);
+  
+  // This is the magic line that fixes the "blinding white" native UI
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  
+  // Keep your existing body style logic
+  if (location.pathname.startsWith('/chat/')) {
+    document.body.style.overflow = "hidden";
+  }
+}, [theme, location.pathname]);
 
 
   // useInfiniteQuery

@@ -112,6 +112,7 @@
 .dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
+  color-scheme: dark;
   --card: 222.2 84% 4.9%;
   --card-foreground: 210 40% 98%;
   --popover: 222.2 84% 4.9%;
@@ -155,6 +156,13 @@
     transition-duration: 200ms;
   }
 
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: auto; /* Prevents the 'looping' page scroll */
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -164,9 +172,53 @@
   }
 
   #root {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 2rem;
-    text-align: center;
+    min-height: 100%;
+    width: 100%;
+    /* Remove max-width and padding here so they don't break full-screen pages */
+    margin: 0;
+    padding: 0;
   }
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 10px;
+}
+
+/* Global scrollbar styling for the whole app */
+::-webkit-scrollbar {
+  width: 6px;  /* Vertical */
+  height: 6px; /* Horizontal (Forum Pills) */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.4);
+  border-radius: 10px;
+}
+
+/* The "Blinding White" Fix: Make it Purple in Dark Mode */
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.5); /* Semi-transparent Purple */
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary)); /* Solid Purple on hover */
+}
+
+/* Specific class for the Chat Room message area */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* Forum Pills: Hide scrollbar but keep swipe functionality */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
