@@ -6,9 +6,11 @@ import ThemeToggleButton from "@/components/ThemeToggle";
 interface AppNavbarProps {
   /** Optional slot rendered between the logo and right-side controls */
   centerSlot?: React.ReactNode;
+  /** Optional extra controls to render on the right (e.g., back button) */
+  extraControls?: React.ReactNode;
 }
 
-const AppNavbar = ({ centerSlot }: AppNavbarProps) => {
+const AppNavbar = ({ centerSlot, extraControls }: AppNavbarProps) => {
   return (
     <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10 transition-colors duration-300">
       <div className="flex items-center justify-between">
@@ -30,14 +32,16 @@ const AppNavbar = ({ centerSlot }: AppNavbarProps) => {
 
         {/* Right-side controls */}
         <div className="flex items-center gap-1">
-          {/* Mobile View: Show only toggles/notifications */}
+          {/* Mobile View: Show only toggles/notifications (and any extraControls if provided) */}
           <div className="flex md:hidden items-center gap-1">
+            {extraControls}
             <ThemeToggleButton />
             <NotificationBell />
           </div>
 
           {/* Desktop View: Show Quick Links + Toggles */}
           <div className="hidden md:flex items-center gap-2 ml-2">
+            {extraControls}
             <Link
               to="/chats"
               title="Chats"

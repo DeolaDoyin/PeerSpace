@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
-import { extractErrorMessage } from "@/lib/errors";
 import ChatListItem from "@/components/ChatListItem";
 import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
@@ -26,7 +25,7 @@ export interface ChatListRow {
 
 const Chats = () => {
   const navigate = useNavigate();
-  const [newPeerName, setNewPeerName] = useState(""); 
+  const [newPeerName, setNewPeerName] = useState("");
   const [starting, setStarting] = useState(false);
 
   const CHATS_POLL_MS = 60_000;
@@ -68,30 +67,30 @@ const Chats = () => {
   };
 
   const startChat = async () => {
-  const name = newPeerName.trim();
-  if (!name) return;
-  
-  setStarting(true);
-  try {
-    const { data } = await api.post<ChatListRow>("/api/chats", { username: name });
-    setNewPeerName("");
-    await refetch();
-    navigate(`/chat/${data.id}`, { state: { peerName: data.peer?.name ?? name } });
-  } catch (err: any) {
-    // Check if the backend returned a 422 (Validation failed/User not found)
-    if (err.response?.status === 422) {
-      toast.error("User not found", {
-        description: `We couldn't find a member named "${name}".`,
+    const name = newPeerName.trim();
+    if (!name) return;
+
+    setStarting(true);
+    try {
+      const { data } = await api.post<ChatListRow>("/api/chats", {
+        username: name,
       });
-    } else {
-      toast.error("Connection error", {
-        description: "Please try again later.",
+      setNewPeerName("");
+      await refetch();
+      navigate(`/chat/${data.id}`, {
+        state: { peerName: data.peer?.name ?? name },
       });
+    } catch (err: any) {
+      // Check if the backend returned a 422 (Validation failed/User not found)
+      if (err.response?.status === 422) {
+        notify.error(`We couldn't find a member named "${name}".`);
+      } else {
+        notify.error("Connection error. Please try again later.");
+      }
+    } finally {
+      setStarting(false);
     }
-  } finally {
-    setStarting(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -133,7 +132,9 @@ const Chats = () => {
       </header>
 
       <div className="px-4 py-3 border-b border-border bg-card/80 space-y-2">
-        <p className="text-xs text-muted-foreground">Start a chat with another member</p>
+        <p className="text-xs text-muted-foreground">
+          Start a chat with another member
+        </p>
         <div className="flex gap-2">
           <input
             type="text"
@@ -143,7 +144,11 @@ const Chats = () => {
             placeholder="Enter Username"
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
-          <Button type="button" onClick={() => void startChat()} disabled={starting || !newPeerName.trim()}>
+          <Button
+            type="button"
+            onClick={() => void startChat()}
+            disabled={starting || !newPeerName.trim()}
+          >
             {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Go"}
           </Button>
         </div>
@@ -186,7 +191,8 @@ const Chats = () => {
           ))}
         {!isLoading && !isError && chats.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-16 px-4">
-            No conversations yet. Enter another user&apos;s Username above to start.
+            No conversations yet. Enter another user&apos;s Username above to
+            start.
           </p>
         )}
       </div>

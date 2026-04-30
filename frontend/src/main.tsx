@@ -41,26 +41,14 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Sonner 
-        position="bottom-center" 
-        richColors 
-        closeButton
-      />
+      <Sonner position="bottom-center" richColors closeButton />
       <BrowserRouter>
-        <Routes>
-          {/* Landing page */}
-          <Route path="/" element={<LandingPage />} />
+        <Suspense>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
 
-
-              {/* Auth page */}
-              <Route
-                path="/auth"
-                element={
-                  <Auth />
-                  // optionally, after successful login you can redirect inside Auth
-                  // or you can wrap it in a component that auto-redirects to /forum
-                }
-              />
+              <Route path="/auth" element={<Auth />} />
 
               {/* After auth, Forum is first page user sees */}
               <Route path="/forum" element={<Forum />} />
@@ -77,10 +65,10 @@ const App = () => (
               {/* Redirect any unknown route to landing */}
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ErrorBoundary>
+          </ErrorBoundary>
+        </Suspense>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 

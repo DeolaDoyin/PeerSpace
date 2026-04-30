@@ -2,17 +2,41 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, Loader2, MoreVertical, Sun, Moon, Flag, User } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  MoreVertical,
+  Sun,
+  Moon,
+  Flag,
+  User,
+} from "lucide-react";
 import api from "@/api/axios";
-import { toast } from "sonner";
+// use the project's notify wrapper for consistent toasts
 import { getEcho } from "@/lib/echo";
 import { notify } from "@/lib/notify";
 import MessageBubble from "@/components/MessageBubble";
 import ChatInput from "@/components/ChatInput";
 import AnonAvatar from "@/components/AnonAvatar";
 import type { ChatListRow } from "@/pages/Chats";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ChatMessageApi {
   id: number;
@@ -94,7 +118,7 @@ const ChatRoom = () => {
   const [sending, setSending] = useState(false);
 
   const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       return localStorage.getItem("theme") || "light";
     }
     return "light";
@@ -108,17 +132,17 @@ const ChatRoom = () => {
   };
 
   useEffect(() => {
-  const isDark = theme === "dark";
-  document.documentElement.classList.toggle("dark", isDark);
-  
-  // This is the magic line that fixes the "blinding white" native UI
-  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
-  
-  // Keep your existing body style logic
-  if (location.pathname.startsWith('/chat/')) {
-    document.body.style.overflow = "hidden";
-  }
-}, [theme, location.pathname]);
+    const isDark = theme === "dark";
+    document.documentElement.classList.toggle("dark", isDark);
+
+    // This is the magic line that fixes the "blinding white" native UI
+    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+
+    // Keep your existing body style logic
+    if (location.pathname.startsWith("/chat/")) {
+      document.body.style.overflow = "hidden";
+    }
+  }, [theme, location.pathname]);
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -216,36 +240,42 @@ const ChatRoom = () => {
   }, [user?.id, chatIdNum, queryClient]);
 
   const handleReportUser = async () => {
-  if (!chatIdNum) return;
-  try {
-    // Calling the report endpoint for the specific chat/user
-    const res = await api.post(`/api/chats/${chatIdNum}/report-user`);
-    toast.success(res.data.message || "User reported. Thank you for keeping PeerSpace safe.");
-  } catch (e: any) {
-    console.error("Failed to report user", e);
-    toast.error(e.response?.data?.message || "Failed to send report.");
-  }
-};
+    if (!chatIdNum) return;
+    try {
+      // Calling the report endpoint for the specific chat/user
+      const res = await api.post(`/api/chats/${chatIdNum}/report-user`);
+      notify.success(
+        res.data.message ||
+          "User reported. Thank you for keeping PeerSpace safe.",
+      );
+    } catch (e: any) {
+      console.error("Failed to report user", e);
+      notify.error(e.response?.data?.message || "Failed to send report.");
+    }
+  };
 
   const handleSend = useCallback(
     async (text: string) => {
       if (!user?.id || !Number.isFinite(chatIdNum)) return;
-      
+
       setSending(true);
       try {
-        const { data } = await api.post<ChatMessageApi>(`/api/chats/${chatIdNum}/messages`, {
-          body: text,
-        });
+        const { data } = await api.post<ChatMessageApi>(
+          `/api/chats/${chatIdNum}/messages`,
+          {
+            body: text,
+          },
+        );
 
         queryClient.setQueryData<MessagesPage | undefined>(
           ["chat-messages", chatIdNum],
-          (prev) => mergeMessageIntoPage(prev, data)
+          (prev) => mergeMessageIntoPage(prev, data),
         );
 
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       } catch (err) {
         console.error("ChatRoom Send Error:", err);
-        toast.error("Message failed to send.");
+        notify.error("Message failed to send.");
       } finally {
         setSending(false);
       }
@@ -285,30 +315,42 @@ const ChatRoom = () => {
 
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <AnonAvatar size="sm" />
-              <h1 className="text-lg font-semibold text-foreground truncate">{peerName}</h1>
+              <h1 className="text-lg font-semibold text-foreground truncate">
+                {peerName}
+              </h1>
             </div>
           </div>
 
           <div className="flex items-center gap-1">
-            <button 
+            <button
               onClick={toggleTheme}
               className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
               aria-label="Toggle Theme"
             >
-              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              {theme === "light" ? (
+                <Moon className="h-5 w-5" />
+              ) : (
+                <Sun className="h-5 w-5" />
+              )}
             </button>
-          
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="p-2 hover:bg-muted rounded-full transition-colors focus:outline-none">
+                <button
+                  type="button"
+                  className="p-2 hover:bg-muted rounded-full transition-colors focus:outline-none"
+                >
                   <MoreVertical className="h-5 w-5 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
-              
+
               <DropdownMenuContent align="end" className="w-48">
                 {/* Link to Profile Page */}
                 <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center cursor-pointer">
+                  <Link
+                    to="/profile"
+                    className="flex items-center cursor-pointer"
+                  >
                     <User className="h-4 w-4 mr-2" />
                     <span>View Profile</span>
                   </Link>
@@ -319,8 +361,8 @@ const ChatRoom = () => {
                 {/* Report User Alert Dialog */}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <DropdownMenuItem 
-                      onSelect={(e) => e.preventDefault()} 
+                    <DropdownMenuItem
+                      onSelect={(e) => e.preventDefault()}
                       className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                     >
                       <Flag className="h-4 w-4 mr-2" />
@@ -331,13 +373,14 @@ const ChatRoom = () => {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Report this peer?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Is this user violating our community guidelines? Our moderators will review this chat shortly. 
-                        This action is anonymous.
+                        Is this user violating our community guidelines? Our
+                        moderators will review this chat shortly. This action is
+                        anonymous.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
+                      <AlertDialogAction
                         onClick={handleReportUser}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
@@ -353,7 +396,10 @@ const ChatRoom = () => {
       </header>
 
       {/* Main scrolling message area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth"
+      >
         {isLoading && (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -393,9 +439,8 @@ const ChatRoom = () => {
 
       {/* Input bar stays fixed at the bottom */}
       <footer className="flex-none bg-card border-t border-border">
-      <ChatInput onSend={handleSend} disabled={sending || isLoading} />
-    </footer>
-
+        <ChatInput onSend={handleSend} disabled={sending || isLoading} />
+      </footer>
     </div>
   );
 };
