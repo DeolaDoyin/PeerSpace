@@ -193,4 +193,9 @@ class AuthController extends Controller
             return redirect()->away($frontendUrl . "/auth?error=oauth_failed");
         }
     }
+
+    /**
+     * Resend email verification notification for the authenticated user.
+     */
+    // method moved to VerificationController
 }

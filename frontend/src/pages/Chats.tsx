@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { Sun, Moon } from 'lucide-react';
-import { toast } from 'sonner';
 import api from "@/api/axios";
+import { notify } from "@/lib/notify";
+import { extractErrorMessage } from "@/lib/errors";
 import ChatListItem from "@/components/ChatListItem";
 import BottomNav from "@/components/BottomNav";
 import NotificationBell from "@/components/NotificationBell";
+import ThemeToggleButton from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, LibraryBig, User, Menu } from "lucide-react";
 
 export interface ChatListRow {
   id: number;
@@ -47,26 +48,6 @@ const Chats = () => {
         : false,
     refetchOnWindowFocus: true,
   });
-  
-// --- Theme Logic ---
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem("theme") || "light";
-    }
-    return "light";
-  });
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-    localStorage.setItem("theme", newTheme);
-    setTheme(newTheme);
-  };
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, []);
-
 
   const previewText = (chat: ChatListRow) => {
     if (chat.last_message?.body) {
@@ -113,25 +94,42 @@ const Chats = () => {
 };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex justify-between items-center">
-        <div>
-          <Link to="/" className="inline-block">
-            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-          </Link>
-          <p className="text-sm text-foreground font-medium mt-1">Chats</p>
-        </div>
-       
-        <div className="flex items-center gap-1">
-            <button 
-              onClick={toggleTheme}
-              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
-              aria-label="Toggle Theme"
-            >
-              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
+              <Menu className="h-5 w-5" />
             </button>
-            <NotificationBell />
+
+            <Link to="/">
+              <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+            </Link>
           </div>
+
+          <div className="flex items-center gap-1">
+            {/* Web-only quick links to other pages */}
+            <div className="hidden md:flex items-center gap-2 ml-2">
+              <Link
+                to="/profile"
+                title="Profile"
+                className="text-primary p-2 hover:bg-muted rounded-full"
+              >
+                <User className="h-5 w-5" />
+              </Link>
+              <Link
+                to="/forum"
+                title="Forum"
+                className="text-primary p-2 hover:bg-muted rounded-full"
+              >
+                <LibraryBig className="h-5 w-5" />
+              </Link>
+              <ThemeToggleButton />
+              <NotificationBell />
+            </div>
+          </div>
+        </div>
       </header>
 
       <div className="px-4 py-3 border-b border-border bg-card/80 space-y-2">
@@ -151,7 +149,7 @@ const Chats = () => {
         </div>
       </div>
 
-      <div className="bg-card">
+      <div className="flex-1 bg-card overflow-y-auto pb-20">
         {isLoading && (
           <div className="flex justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -161,7 +159,12 @@ const Chats = () => {
           <div className="flex flex-col items-center gap-2 py-16 px-4 text-center text-destructive">
             <AlertCircle className="h-8 w-8" />
             <p className="text-sm">Could not load chats.</p>
-            <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+            >
               Retry
             </Button>
           </div>

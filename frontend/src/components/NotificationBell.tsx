@@ -1,4 +1,12 @@
-import { Bell, Check, Loader2, Heart, MessageCircle, Flag, Trash2 } from "lucide-react";
+import {
+  Bell,
+  Check,
+  Loader2,
+  Heart,
+  MessageCircle,
+  Flag,
+  Trash2,
+} from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/axios";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { getEcho } from "@/lib/echo";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 interface DbNotification {
   id: string;
@@ -41,7 +49,11 @@ const NotificationBell = () => {
     },
   });
 
-  const { data: notifications, isLoading, refetch } = useQuery({
+  const {
+    data: notifications,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
       const { data } = await api.get<DbNotification[]>("/api/notifications");
@@ -62,10 +74,10 @@ const NotificationBell = () => {
     const channel = echo.private(`App.Models.User.${user.id}`);
     channel.notification((notification: any) => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      
+
       // Optionally show a toast for new notifications if the sheet isn't open
       if (!isOpen && notification.data?.message) {
-        toast(notification.data.message);
+        notify.info(notification.data.message);
       }
     });
 
@@ -82,17 +94,22 @@ const NotificationBell = () => {
         queryClient.invalidateQueries({ queryKey: ["notifications"] });
       });
       setIsOpen(false);
-      
+
       if (notifData?.type === "content_deleted") {
-        toast.info("This content has been removed.");
+        notify.info("This content has been removed.");
         return;
       }
 
       if (notifData?.post_slug) {
         navigate(`/posts/${notifData.post_slug}`);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      const e = err as any;
+      const msg =
+        e?.message || "Failed to mark notification read. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
     }
   };
 
@@ -100,14 +117,21 @@ const NotificationBell = () => {
     try {
       await api.post("/api/notifications/mark-all-read");
       await queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      const e = err as any;
+      const msg =
+        e?.message || "Failed to mark notifications. Please try again.";
+      try {
+        notify.error(msg);
+      } catch {}
     }
   };
 
   const getIcon = (type?: string) => {
-    if (type === "like" || type === "comment_like") return <Heart className="h-4 w-4" />;
-    if (type === "content_reported") return <Flag className="h-4 w-4 text-destructive" />;
+    if (type === "like" || type === "comment_like")
+      return <Heart className="h-4 w-4" />;
+    if (type === "content_reported")
+      return <Flag className="h-4 w-4 text-destructive" />;
     if (type === "content_deleted") return <Trash2 className="h-4 w-4" />;
     return <MessageCircle className="h-4 w-4" />;
   };
@@ -122,20 +146,28 @@ const NotificationBell = () => {
     >
       <SheetTrigger asChild>
         <button className="p-2 -mr-2 hover:bg-muted rounded-full transition-colors relative">
-          <Bell className="h-5 w-5 text-foreground" />
+          <Bell className="text-primary h-5 w-5 text-foreground" />
           {unreadCount > 0 && (
             <span className="absolute top-0 right-0 h-4 min-w-[16px] flex items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground px-1">
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
         </button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[300px] sm:max-w-md overflow-y-auto">
+      <SheetContent
+        side="right"
+        className="w-[300px] sm:max-w-md overflow-y-auto"
+      >
         <SheetHeader className="mb-4">
           <div className="flex items-center justify-between">
             <SheetTitle>Activity</SheetTitle>
             {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={handleMarkAll} className="h-8 text-xs text-muted-foreground p-0 px-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleMarkAll}
+                className="h-8 text-xs text-muted-foreground p-0 px-2"
+              >
                 <Check className="h-3 w-3 mr-1" /> Mark all read
               </Button>
             )}
@@ -157,13 +189,12 @@ const NotificationBell = () => {
             </div>
           ) : (
             notifications?.map((notif) => (
-              <div 
-                key={notif.id} 
+              <div
+                key={notif.id}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter")
-                    void handleRead(notif.id, notif.data);
+                  if (e.key === "Enter") void handleRead(notif.id, notif.data);
                 }}
                 onClick={() => void handleRead(notif.id, notif.data)}
                 className="p-3 bg-muted/50 hover:bg-muted rounded-lg border border-border cursor-pointer transition-colors"
