@@ -114,5 +114,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Change password - PATCH /settings/users/1/password
         Route::patch('password', [PasswordController::class, 'update'])
             ->name('users.password.update');
-    )};
+    });
 });

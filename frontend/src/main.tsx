@@ -40,27 +40,23 @@ const queryClient = new QueryClient({
 // eslint-disable-next-line react-refresh/only-export-components
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Sonner 
-        position="bottom-center" 
-        richColors 
-        closeButton
-      />
-      <BrowserRouter>
-        <Routes>
-          {/* Landing page */}
-          <Route path="/" element={<LandingPage />} />
-
+    {/* 1. Added opening ErrorBoundary */}
+    <ErrorBoundary> 
+      <TooltipProvider>
+        <Sonner 
+          position="bottom-center" 
+          richColors 
+          closeButton
+        />
+        <BrowserRouter>
+          {/* 2. Added opening Suspense - Required when using lazy() */}
+          <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+            <Routes>
+              {/* Landing page */}
+              <Route path="/" element={<LandingPage />} />
 
               {/* Auth page */}
-              <Route
-                path="/auth"
-                element={
-                  <Auth />
-                  // optionally, after successful login you can redirect inside Auth
-                  // or you can wrap it in a component that auto-redirects to /forum
-                }
-              />
+              <Route path="/auth" element={<Auth />} />
 
               {/* After auth, Forum is first page user sees */}
               <Route path="/forum" element={<Forum />} />
