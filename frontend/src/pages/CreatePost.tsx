@@ -64,7 +64,7 @@ const CreatePost = () => {
         is_pinned: false,
       });
       // Navigate to the post detail or back to forum
-      navigate(`/posts/${data.id}`);
+      navigate(`/posts/${data.slug}`);
     } catch (err) {
       const e = err as any;
       // Validation errors: show field-level messages
