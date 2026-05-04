@@ -3,9 +3,17 @@ import { useNavigate } from "react-router-dom";
 import api from "@/api/axios";
 import { extractErrorMessage } from "@/lib/errors";
 import { notify } from "@/lib/notify";
-import { ArrowLeft, Loader2, Send } from "lucide-react";
+import { Loader2, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import AppNavbar from "@/components/AppNavbar";
+// ...page-level controls removed; modal contains its own header
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Category {
   id: number;
@@ -64,7 +72,7 @@ const CreatePost = () => {
         is_pinned: false,
       });
       // Navigate to the post detail or back to forum
-      navigate(`/posts/${data.id}`);
+      navigate(`/posts/${data.slug}`);
     } catch (err) {
       const e = err as any;
       // Validation errors: show field-level messages
@@ -89,153 +97,173 @@ const CreatePost = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <AppNavbar
-        extraControls={
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={18} />
-          </button>
-        }
-      />
+      <AlertDialog
+        open={true}
+        onOpenChange={(v) => {
+          if (!v) navigate(-1);
+        }}
+      >
+        {/* Trigger not needed when opening as a page; modal opens immediately */}
+        <AlertDialogTrigger asChild>
+          <div />
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <div className="relative">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Create Post</AlertDialogTitle>
+              <AlertDialogDescription>
+                Share something anonymously with the community. Your title and
+                message will be posted to the selected space.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
 
-      <main className="p-4 max-w-2xl mx-auto">
-        {error && (
-          <div className="mb-4 p-3 text-sm text-red-500 bg-red-100 rounded-lg">
-            {error}
+            {/* Top-right X close button */}
+            <button
+              onClick={() => navigate(-1)}
+              className="absolute right-3 top-3 text-muted-foreground p-1 rounded hover:bg-muted"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="category"
-              className="text-sm font-medium text-foreground"
-            >
-              Select Category
-            </label>
-            <select
-              id="category"
-              value={categoryId}
-              onChange={(e) => {
-                setCategoryId(e.target.value);
-                setFieldErrors((prev) => {
-                  const copy = { ...prev };
-                  delete copy.category_id;
-                  return copy;
-                });
-                setError("");
-              }}
-              disabled={fetchingCategories}
-              className="w-full bg-card border border-border rounded-lg p-3 text-foreground appearance-none shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              {fetchingCategories ? (
-                <option>Loading categories...</option>
-              ) : (
-                categories.map((cat) => (
-                  <option key={cat.id} value={cat.id.toString()}>
-                    {cat.name}
-                  </option>
-                ))
-              )}
-            </select>
-            {fieldErrors.category_id && (
-              <div className="mt-1 space-y-1">
-                {fieldErrors.category_id.map((m, i) => (
-                  <p key={i} className="text-xs text-red-500">
-                    {m}
-                  </p>
-                ))}
+          <div className="mt-4 max-w-2xl mx-auto p-1">
+            {error && (
+              <div className="mb-4 p-3 text-sm text-red-500 bg-red-100 rounded-lg">
+                {error}
               </div>
             )}
-          </div>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="title"
-              className="text-sm font-medium text-foreground"
-            >
-              Title
-            </label>
-            <input
-              id="title"
-              type="text"
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                setFieldErrors((prev) => {
-                  const copy = { ...prev };
-                  delete copy.title;
-                  return copy;
-                });
-                setError("");
-              }}
-              placeholder="Give your thoughts a clear title"
-              className="w-full bg-card border border-border rounded-lg p-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-              maxLength={255}
-            />
-            {fieldErrors.title && (
-              <div className="mt-1 space-y-1">
-                {fieldErrors.title.map((m, i) => (
-                  <p key={i} className="text-xs text-red-500">
-                    {m}
-                  </p>
-                ))}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="category"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Select Category
+                </label>
+                <select
+                  id="category"
+                  value={categoryId}
+                  onChange={(e) => {
+                    setCategoryId(e.target.value);
+                    setFieldErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.category_id;
+                      return copy;
+                    });
+                    setError("");
+                  }}
+                  disabled={fetchingCategories}
+                  className="w-full bg-card border border-border rounded-lg p-3 text-foreground appearance-none shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  {fetchingCategories ? (
+                    <option>Loading categories...</option>
+                  ) : (
+                    categories.map((cat) => (
+                      <option key={cat.id} value={cat.id.toString()}>
+                        {cat.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {fieldErrors.category_id && (
+                  <div className="mt-1 space-y-1">
+                    {fieldErrors.category_id.map((m, i) => (
+                      <p key={i} className="text-xs text-red-500">
+                        {m}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <label
-              htmlFor="body"
-              className="text-sm font-medium text-foreground"
-            >
-              Your Message
-            </label>
-            <textarea
-              id="body"
-              value={body}
-              onChange={(e) => {
-                setBody(e.target.value);
-                setFieldErrors((prev) => {
-                  const copy = { ...prev };
-                  delete copy.body;
-                  return copy;
-                });
-                setError("");
-              }}
-              placeholder="What's on your mind? Share safely and anonymously..."
-              rows={8}
-              className="w-full bg-card border border-border rounded-lg p-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-            />
-            {fieldErrors.body && (
-              <div className="mt-1 space-y-1">
-                {fieldErrors.body.map((m, i) => (
-                  <p key={i} className="text-xs text-red-500">
-                    {m}
-                  </p>
-                ))}
+              <div className="space-y-2">
+                <label
+                  htmlFor="title"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Title
+                </label>
+                <input
+                  id="title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setFieldErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.title;
+                      return copy;
+                    });
+                    setError("");
+                  }}
+                  placeholder="Give your thoughts a clear title"
+                  className="w-full bg-card border border-border rounded-lg p-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  maxLength={255}
+                />
+                {fieldErrors.title && (
+                  <div className="mt-1 space-y-1">
+                    {fieldErrors.title.map((m, i) => (
+                      <p key={i} className="text-xs text-red-500">
+                        {m}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <Button
-            type="submit"
-            disabled={loading || fetchingCategories}
-            className="w-full h-12 rounded-xl text-base gap-2 mt-4"
-          >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <>
-                <Send size={18} /> Share Anonymously
-              </>
-            )}
-          </Button>
-        </form>
-      </main>
+              <div className="space-y-2">
+                <label
+                  htmlFor="body"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Your Message
+                </label>
+                <textarea
+                  id="body"
+                  value={body}
+                  onChange={(e) => {
+                    setBody(e.target.value);
+                    setFieldErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.body;
+                      return copy;
+                    });
+                    setError("");
+                  }}
+                  placeholder="What's on your mind?"
+                  rows={8}
+                  className="w-full bg-card border border-border rounded-lg p-3 text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                />
+                {fieldErrors.body && (
+                  <div className="mt-1 space-y-1">
+                    {fieldErrors.body.map((m, i) => (
+                      <p key={i} className="text-xs text-red-500">
+                        {m}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading || fetchingCategories}
+                className="w-full h-12 rounded-xl text-base gap-2 mt-4"
+              >
+                {loading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <Send size={18} /> Share Anonymously
+                  </>
+                )}
+              </Button>
+            </form>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

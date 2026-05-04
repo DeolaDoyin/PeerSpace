@@ -5,11 +5,12 @@ namespace App\Notifications;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class NewCommentOnFollowedPost extends Notification implements ShouldBroadcast
+class NewCommentOnFollowedPost extends Notification implements ShouldBroadcast, ShouldQueue
 {
     use Queueable;
 

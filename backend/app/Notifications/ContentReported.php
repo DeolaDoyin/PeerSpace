@@ -4,11 +4,12 @@ namespace App\Notifications;
 
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class ContentReported extends Notification implements ShouldBroadcast
+class ContentReported extends Notification implements ShouldBroadcast, ShouldQueue
 {
     use Queueable;
 

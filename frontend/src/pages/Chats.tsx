@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
 import ChatListItem from "@/components/ChatListItem";
 import BottomNav from "@/components/BottomNav";
-import NotificationBell from "@/components/NotificationBell";
-import ThemeToggleButton from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, LibraryBig, User, Menu } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import AppNavbar from "@/components/AppNavbar";
 
 export interface ChatListRow {
   id: number;
@@ -94,42 +93,8 @@ const Chats = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
-              <Menu className="h-5 w-5" />
-            </button>
-
-            <Link to="/">
-              <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Web-only quick links to other pages */}
-            <div className="hidden md:flex items-center gap-2 ml-2">
-              <Link
-                to="/profile"
-                title="Profile"
-                className="text-primary p-2 hover:bg-muted rounded-full"
-              >
-                <User className="h-5 w-5" />
-              </Link>
-              <Link
-                to="/forum"
-                title="Forum"
-                className="text-primary p-2 hover:bg-muted rounded-full"
-              >
-                <LibraryBig className="h-5 w-5" />
-              </Link>
-              <ThemeToggleButton />
-              <NotificationBell />
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Navbar */}
+      <AppNavbar />
 
       <div className="px-4 py-3 border-b border-border bg-card/80 space-y-2">
         <p className="text-xs text-muted-foreground">

@@ -3,15 +3,16 @@ import { useNavigate, useLocation } from "react-router-dom";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
 import FloatingInput from "@/components/FloatingInput";
+import ThemeToggleButton from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Sun, Moon } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 // (Previously declared SocialButton removed because it wasn't used)
 
 const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isLogin, setIsLogin] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,26 +20,6 @@ const Auth = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingAlias, setIsLoadingAlias] = useState(false);
-
-  // --- Theme Logic ---
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-    localStorage.setItem("theme", newTheme);
-    setTheme(newTheme);
-  };
 
   const fetchSuggestion = async () => {
     setIsLoadingAlias(true);
@@ -64,9 +45,7 @@ const Auth = () => {
 
   useEffect(() => {
     const hash = window.location.hash;
-    if (hash.includes("oauth_token=")) {
-      const token = hash.split("oauth_token=")[1];
-      localStorage.setItem("token", token);
+    if (hash.includes("oauth_success")) {
       window.location.hash = "";
       navigate("/forum");
     } else if (location.search.includes("error=oauth_failed")) {
@@ -107,7 +86,7 @@ const Auth = () => {
 
       await api.get("/sanctum/csrf-cookie");
       const response = await api.post(endpoint, payload);
-      localStorage.setItem("token", response.data.token);
+      // Token is handled strictly by cookies now
       // If registration returned a user and the email is not verified, redirect
       // to the verification notice page so the user can resend the email.
       if (
@@ -162,14 +141,7 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex flex-col transition-colors duration-300 relative">
       {/* Theme Toggle Button */}
       <div className="absolute top-4 right-4 z-50">
-        <button
-          onClick={toggleTheme}
-          type="button"
-          className="p-3 rounded-xl bg-muted hover:bg-accent text-foreground transition-all border border-border shadow-sm"
-          aria-label="Toggle Theme"
-        >
-          {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-        </button>
+        <ThemeToggleButton />
       </div>
 
       <div className="flex-1 flex flex-col justify-center px-6 py-12">

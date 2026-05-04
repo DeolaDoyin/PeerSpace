@@ -6,8 +6,6 @@ import {
   ArrowLeft,
   Loader2,
   MoreVertical,
-  Sun,
-  Moon,
   Flag,
   User,
 } from "lucide-react";
@@ -16,6 +14,7 @@ import api from "@/api/axios";
 import { getEcho } from "@/lib/echo";
 import { notify } from "@/lib/notify";
 import MessageBubble from "@/components/MessageBubble";
+import ThemeToggleButton from "@/components/ThemeToggle";
 import ChatInput from "@/components/ChatInput";
 import AnonAvatar from "@/components/AnonAvatar";
 import type { ChatListRow } from "@/pages/Chats";
@@ -116,33 +115,6 @@ const ChatRoom = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [sending, setSending] = useState(false);
-
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("theme") || "light";
-    }
-    return "light";
-  });
-
-  const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-    localStorage.setItem("theme", newTheme);
-    setTheme(newTheme);
-  };
-
-  useEffect(() => {
-    const isDark = theme === "dark";
-    document.documentElement.classList.toggle("dark", isDark);
-
-    // This is the magic line that fixes the "blinding white" native UI
-    document.documentElement.style.colorScheme = isDark ? "dark" : "light";
-
-    // Keep your existing body style logic
-    if (location.pathname.startsWith("/chat/")) {
-      document.body.style.overflow = "hidden";
-    }
-  }, [theme, location.pathname]);
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -322,17 +294,7 @@ const ChatRoom = () => {
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              onClick={toggleTheme}
-              className="p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
-              aria-label="Toggle Theme"
-            >
-              {theme === "light" ? (
-                <Moon className="h-5 w-5" />
-              ) : (
-                <Sun className="h-5 w-5" />
-              )}
-            </button>
+            <ThemeToggleButton />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -340,7 +302,7 @@ const ChatRoom = () => {
                   type="button"
                   className="p-2 hover:bg-muted rounded-full transition-colors focus:outline-none"
                 >
-                  <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                  <MoreVertical className="text-primary h-5 w-5 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
 
