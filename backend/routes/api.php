@@ -11,6 +11,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\PasswordController;
 use App\Services\RedditAliasService;
 
 Route::middleware(['throttle:auth'])->group(function () {
@@ -32,6 +33,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return $request->user();
     });
     Route::put('/user', [AuthController::class, 'updateProfile']);
+
+    // Change password for the authenticated user (frontend posts to /api/user/password)
+    Route::patch('/user/password', [PasswordController::class, 'update'])
+        ->name('user.password.update');
 
     // Posts
     Route::get('posts', [PostController::class, 'index']);
@@ -115,4 +120,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::patch('password', [PasswordController::class, 'update'])
             ->name('users.password.update');
     });
+
 });

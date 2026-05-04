@@ -1,16 +1,14 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
-import { extractErrorMessage } from "@/lib/errors";
 import ChatListItem from "@/components/ChatListItem";
 import BottomNav from "@/components/BottomNav";
-import NotificationBell from "@/components/NotificationBell";
-import ThemeToggleButton from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, LibraryBig, User, Menu } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import AppNavbar from "@/components/AppNavbar";
 
 export interface ChatListRow {
   id: number;
@@ -26,7 +24,7 @@ export interface ChatListRow {
 
 const Chats = () => {
   const navigate = useNavigate();
-  const [newPeerName, setNewPeerName] = useState(""); 
+  const [newPeerName, setNewPeerName] = useState("");
   const [starting, setStarting] = useState(false);
 
   const CHATS_POLL_MS = 60_000;
@@ -68,72 +66,40 @@ const Chats = () => {
   };
 
   const startChat = async () => {
-  const name = newPeerName.trim();
-  if (!name) return;
-  
-  setStarting(true);
-  try {
-    const { data } = await api.post<ChatListRow>("/api/chats", { username: name });
-    setNewPeerName("");
-    await refetch();
-    navigate(`/chat/${data.id}`, { state: { peerName: data.peer?.name ?? name } });
-  } catch (err: any) {
-    // Check if the backend returned a 422 (Validation failed/User not found)
-    if (err.response?.status === 422) {
-      toast.error("User not found", {
-        description: `We couldn't find a member named "${name}".`,
+    const name = newPeerName.trim();
+    if (!name) return;
+
+    setStarting(true);
+    try {
+      const { data } = await api.post<ChatListRow>("/api/chats", {
+        username: name,
       });
-    } else {
-      toast.error("Connection error", {
-        description: "Please try again later.",
+      setNewPeerName("");
+      await refetch();
+      navigate(`/chat/${data.id}`, {
+        state: { peerName: data.peer?.name ?? name },
       });
+    } catch (err: any) {
+      // Check if the backend returned a 422 (Validation failed/User not found)
+      if (err.response?.status === 422) {
+        notify.error(`We couldn't find a member named "${name}".`);
+      } else {
+        notify.error("Connection error. Please try again later.");
+      }
+    } finally {
+      setStarting(false);
     }
-  } finally {
-    setStarting(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
-              <Menu className="h-5 w-5" />
-            </button>
-
-            <Link to="/">
-              <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Web-only quick links to other pages */}
-            <div className="hidden md:flex items-center gap-2 ml-2">
-              <Link
-                to="/profile"
-                title="Profile"
-                className="text-primary p-2 hover:bg-muted rounded-full"
-              >
-                <User className="h-5 w-5" />
-              </Link>
-              <Link
-                to="/forum"
-                title="Forum"
-                className="text-primary p-2 hover:bg-muted rounded-full"
-              >
-                <LibraryBig className="h-5 w-5" />
-              </Link>
-              <ThemeToggleButton />
-              <NotificationBell />
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Navbar */}
+      <AppNavbar />
 
       <div className="px-4 py-3 border-b border-border bg-card/80 space-y-2">
-        <p className="text-xs text-muted-foreground">Start a chat with another member</p>
+        <p className="text-xs text-muted-foreground">
+          Start a chat with another member
+        </p>
         <div className="flex gap-2">
           <input
             type="text"
@@ -143,7 +109,11 @@ const Chats = () => {
             placeholder="Enter Username"
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
-          <Button type="button" onClick={() => void startChat()} disabled={starting || !newPeerName.trim()}>
+          <Button
+            type="button"
+            onClick={() => void startChat()}
+            disabled={starting || !newPeerName.trim()}
+          >
             {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Go"}
           </Button>
         </div>
@@ -186,7 +156,8 @@ const Chats = () => {
           ))}
         {!isLoading && !isError && chats.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-16 px-4">
-            No conversations yet. Enter another user&apos;s Username above to start.
+            No conversations yet. Enter another user&apos;s Username above to
+            start.
           </p>
         )}
       </div>

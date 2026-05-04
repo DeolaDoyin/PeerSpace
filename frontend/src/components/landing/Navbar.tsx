@@ -1,4 +1,4 @@
-import { Heart, Menu, User } from "lucide-react";
+import { Heart, LibraryBig, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
@@ -51,15 +51,26 @@ const Navbar = () => {
 
         {/* Right side controls */}
         <div className="flex items-center gap-2">
-          <ThemeToggleButton />
 
           {/* Dynamic Desktop Button */}
+          {user && (
+            <>
+              <Link
+                to="/forum"
+                title="Forum"
+                className="hidden sm:inline-flex text-primary p-2 hover:bg-muted rounded-full transition-colors"
+              >
+                <LibraryBig className="h-5 w-5" />
+              </Link>
+            </>
+          )}
+
           {!isLoading &&
             (user ? (
               <Link
                 to="/profile"
                 title="Profile"
-                className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
+                className="hidden sm:inline-flex text-primary p-2 hover:bg-muted rounded-full transition-colors"
               >
                 <User className="h-5 w-5" />
               </Link>
@@ -70,6 +81,9 @@ const Navbar = () => {
                 </Button>
               </Link>
             ))}
+
+            
+          <ThemeToggleButton />
 
           {/* Mobile menu */}
           <Sheet>
@@ -95,6 +109,18 @@ const Navbar = () => {
                     {link.label}
                   </a>
                 ))}
+
+                {user && (
+                  <>                    
+                    <Link
+                      to="/forum"
+                      title="Forum"
+                      className="rounded-md px-4 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
+                    >
+                      Forum
+                    </Link>
+                  </>
+                )}
 
                 {!isLoading &&
                   (user ? (
