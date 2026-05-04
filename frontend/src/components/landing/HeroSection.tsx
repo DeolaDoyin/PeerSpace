@@ -1,5 +1,6 @@
 import { Heart, Shield, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
 const HeroSection = () => {
@@ -21,8 +22,12 @@ const HeroSection = () => {
           A safe, anonymous space where you can share your thoughts, find support from peers who understand, and know that someone cares.
         </motion.p>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Button size="lg" className="gap-2 px-8 text-base"><Heart className="h-5 w-5" />Share Your Story</Button>
-          <Button size="lg" variant="outline" className="gap-2 px-8 text-base"><Users className="h-5 w-5" />Browse Support</Button>
+          <Link to="/forum">
+            <Button size="lg" className="gap-2 px-8 text-base"><Heart className="h-5 w-5" />Share Your Story</Button>
+          </Link>
+          <Link to="#resources">
+            <Button size="lg" variant="outline" className="gap-2 px-8 text-base"><Users className="h-5 w-5" />Browse Support</Button>
+          </Link>
         </motion.div>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }} className="mt-12 flex items-center justify-center gap-8 text-sm text-muted-foreground">
           <span className="flex items-center gap-2"><Shield className="h-4 w-4 text-primary" />Anonymous</span>

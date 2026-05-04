@@ -1,16 +1,41 @@
-import { Menu, User, LibraryBig, MessageCircle } from "lucide-react"; // Updated icons
-import { Link } from "react-router-dom";
+import {
+  Menu,
+  RefreshCcw,
+  User,
+  LibraryBig,
+  MessageCircle,
+} from "lucide-react"; // Updated icons
+import { Link, useLocation } from "react-router-dom";
 import NotificationBell from "@/components/NotificationBell";
 import ThemeToggleButton from "@/components/ThemeToggle";
 
 interface AppNavbarProps {
   /** Optional slot rendered between the logo and right-side controls */
   centerSlot?: React.ReactNode;
-  /** Added: slot for back buttons or extra tools on the left */
+  /** Optional extra controls to render on the right (e.g., back button) */
   extraControls?: React.ReactNode;
 }
 
 const AppNavbar = ({ centerSlot, extraControls }: AppNavbarProps) => {
+  const location = useLocation();
+
+  // Helper to check if a link should be hidden
+  const isPage = (path: string) => location.pathname === path;
+
+  // Safe refresh handler: dispatch a custom event so the Forum page (or any
+  // interested consumer) can listen and trigger a re-fetch. This avoids
+  // referencing query hooks or other page-specific state from the navbar.
+  const handleRefresh = () => {
+    try {
+      window.dispatchEvent(new CustomEvent("peerspace:forum-refresh"));
+    } catch (e) {
+      // Fallback: force a full reload if CustomEvent isn't supported
+      try {
+        window.location.reload();
+      } catch {}
+    }
+  };
+
   return (
     <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10 transition-colors duration-300">
       <div className="flex items-center justify-between">
@@ -38,37 +63,57 @@ const AppNavbar = ({ centerSlot, extraControls }: AppNavbarProps) => {
 
         {/* Right-side controls */}
         <div className="flex items-center gap-1">
-          {/* Mobile View: Show only toggles/notifications */}
+          {/* Mobile View: Show only toggles/notifications (and any extraControls if provided) */}
           <div className="flex md:hidden items-center gap-1">
+            {extraControls}
             <ThemeToggleButton />
             <NotificationBell />
           </div>
 
           {/* Desktop View: Show Quick Links + Toggles */}
           <div className="hidden md:flex items-center gap-2 ml-2">
-            <Link
-              to="/chats"
-              title="Chats"
-              className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </Link>
+            {extraControls}
 
-            <Link
-              to="/forum"
-              title="Forum"
-              className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
-            >
-              <LibraryBig className="h-5 w-5" />
-            </Link>
+            {/* Conditionally render links based on current path */}
+            {isPage("/forum") && (
+              <button
+                onClick={handleRefresh}
+                title="Refresh"
+                className="text-primary p-2 hover:bg-muted rounded-full"
+              >
+                <RefreshCcw className="h-5 w-5" />
+              </button>
+            )}
 
-            <Link
-              to="/profile"
-              title="Profile"
-              className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
-            >
-              <User className="h-5 w-5" />
-            </Link>
+            {!isPage("/chats") && (
+              <Link
+                to="/chats"
+                title="Chats"
+                className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Link>
+            )}
+
+            {!isPage("/forum") && (
+              <Link
+                to="/forum"
+                title="Forum"
+                className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
+              >
+                <LibraryBig className="h-5 w-5" />
+              </Link>
+            )}
+
+            {!isPage("/profile") && (
+              <Link
+                to="/profile"
+                title="Profile"
+                className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
+              >
+                <User className="h-5 w-5" />
+              </Link>
+            )}
 
             <ThemeToggleButton />
             <NotificationBell />

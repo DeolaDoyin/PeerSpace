@@ -28,10 +28,9 @@ class AuthController extends Controller
             'account_status' => 'active', // Default status from your ERD
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
         Auth::login($user);
 
-        return response()->json(['user' => $user, 'token' => $token, 'token_type' => 'Bearer', 'message' => 'Registration successful'], 201);
+        return response()->json(['user' => $user, 'message' => 'Registration successful'], 201);
     }
 
     // 2. Login existing user
@@ -84,11 +83,10 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Your account has been suspended.'], 403);
             }
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            Auth::login($user);
 
             return response()->json([
                 'user' => $user,
-                'token' => $token,
             ]);
 
         } catch (\Exception $e) {
@@ -103,17 +101,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // Revoke the current access token if present (Sanctum)
-        try {
-            if ($user && method_exists($user, 'currentAccessToken') && $user->currentAccessToken()) {
-                $user->currentAccessToken()->delete();
-            } elseif ($user && method_exists($user, 'tokens')) {
-                // Fallback: delete all tokens for the user
-                $user->tokens()->delete();
-            }
-        } catch (\Exception $e) {
-            \Log::warning('Failed to revoke token on logout', ['exception' => $e]);
-        }
+        // Token logic removed. Rely on session invalidation.
 
         Auth::guard('web')->logout();
         $request->session()->invalidate();
@@ -183,10 +171,10 @@ class AuthController extends Controller
                 ]);
             }
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            Auth::login($user);
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
             
-            return redirect()->away($frontendUrl . "/auth#oauth_token=" . $token);
+            return redirect()->away($frontendUrl . "/auth#oauth_success");
         } catch (\Exception $e) {
             \Log::error('Socialite Error', ['exception' => $e]);
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');

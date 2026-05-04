@@ -10,13 +10,11 @@ import api from "@/api/axios";
 import { notify } from "@/lib/notify";
 import { extractErrorMessage } from "@/lib/errors";
 import BottomNav from "@/components/BottomNav";
-import ThemeToggleButton from "@/components/ThemeToggle";
-import NotificationBell from "@/components/NotificationBell";
+import AppNavbar from "@/components/AppNavbar";
 import { Card } from "@/components/ui/card";
 import LikeButton from "@/components/LikeButton";
 import {
   MessageCircle,
-  RefreshCcw,
   Loader2,
   AlertCircle,
   Plus,
@@ -27,16 +25,14 @@ import {
   Bookmark,
   EyeOff,
   Bell,
-  User,
-  Menu,
 } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+// import {
+//   Sheet,
+//   SheetContent,
+//   SheetHeader,
+//   SheetTitle,
+//   SheetTrigger,
+// } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,9 +55,9 @@ import {
 interface Post {
   id: number;
   slug: string;
-  name: string;
   title: string;
   body: string;
+  user_id: string;
   created_at: string;
   comments_count: number;
   likes_count: number;
@@ -70,11 +66,7 @@ interface Post {
   is_hidden?: boolean;
   is_followed?: boolean;
   is_pinned: boolean;
-  user_id: number;
-  creator?: {
-    id: number;
-    name: string;
-  };
+  creator?: { id: number; name: string };
 }
 
 interface PaginatedResponse {
@@ -144,10 +136,10 @@ const Forum = () => {
     data,
     isLoading,
     isError,
-    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch,
   } = useInfiniteQuery({
     queryKey: ["forum-posts", selectedCategory],
     queryFn: fetchPosts,
@@ -165,6 +157,25 @@ const Forum = () => {
         : false,
     refetchOnWindowFocus: true,
   });
+
+  // Listen for global refresh events (dispatched by the navbar)
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => {
+      try {
+        refetch();
+      } catch {}
+    };
+    window.addEventListener(
+      "peerspace:forum-refresh",
+      handler as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "peerspace:forum-refresh",
+        handler as EventListener,
+      );
+  }, [refetch]);
 
   const handlePin = async (id: number) => {
     try {
@@ -270,71 +281,8 @@ const Forum = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-    <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex justify-between items-center">
-      <div className="flex items-center gap-2">
-        {/* Hamburger Menu for Mobile */}
-        {/* <Sheet>
-          <SheetTrigger asChild>
-            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors md:hidden">
-              <Menu className="h-5 w-5 text-primary" />
-            </button>
-          </SheetTrigger>
-          <SheetContent side="left">
-            <SheetHeader>
-              <SheetTitle className="text-left">PeerSpace Menu</SheetTitle>
-            </SheetHeader>
-            <div className="flex flex-col gap-4 mt-8">
-              <Link to="/chats" className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg text-foreground">
-                <MessageCircle className="h-5 w-5" /> Chats
-              </Link>
-              <Link to="/profile" className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg text-foreground">
-                <User className="h-5 w-5" /> Profile
-              </Link>
-              <Link to="/forum" className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg text-foreground">
-                <RefreshCcw className="h-5 w-5" /> Forum
-              </Link>
-            </div>
-          </SheetContent>
-        </Sheet> */}
-
-        <Link to="/" className="inline-block">
-          <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-        </Link>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => refetch()}
-          title="Refresh"
-          className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
-        >
-          <RefreshCcw className="h-5 w-5" />
-        </button>
-
-        {/* Desktop-only links */}
-        <div className="hidden md:flex items-center gap-2">
-          <Link
-            to="/chats"
-            title="Chats"
-            className="text-primary p-2 hover:bg-muted rounded-full"
-          >
-            <MessageCircle className="h-5 w-5" />
-          </Link>
-          <Link
-            to="/profile"
-            title="Profile"
-            className="text-primary p-2 hover:bg-muted rounded-full"
-          >
-            <User className="h-5 w-5" />
-          </Link>
-        </div>
-
-        {/* Always visible icons on mobile and desktop */}
-        <ThemeToggleButton />
-        <NotificationBell />
-      </div>
-    </header>
+      {/* Navbar */}
+      <AppNavbar />
 
       {/* Category Pills (mobile) */}
       <div className="px-4 py-3 border-b border-border bg-card overflow-x-auto whitespace-nowrap hide-scrollbar md:hidden">
@@ -445,19 +393,22 @@ const Forum = () => {
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                        {post.name?.[0] || "A"}
+                        {post.creator?.name?.[0] || "A"}
                       </div>
                       <div
                         className="flex flex-col cursor-pointer group"
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
-                          if (post.user_id)
-                            handleStartChat(post.user_id, post.name || "Peer");
+                          if (post.creator?.id)
+                            handleStartChat(
+                              post.creator.id,
+                              post.creator?.name || "Peer",
+                            );
                         }}
                       >
                         <span className="text-xs font-semibold text-foreground group-hover:underline">
-                          {post.name || "Anonymous"}
+                          {post.creator?.name || "Anonymous"}
                         </span>
                         <span className="text-[10px] text-muted-foreground">
                           {post.created_at
@@ -582,9 +533,10 @@ const Forum = () => {
                                 </DropdownMenuItem>
                               </>
                             )}
+
                             {(user?.role === "admin" ||
                               user?.role === "moderator" ||
-                              user?.id === post.user_id) && (
+                              user?.id === post.creator?.id) && (
                               <>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>

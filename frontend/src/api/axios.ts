@@ -22,10 +22,7 @@ api.interceptors.request.use((config) => {
     config.headers["X-XSRF-TOKEN"] = decodeURIComponent(xsrfToken);
   }
 
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  // Token logic removed. Relying strictly on cookies.
   return config;
 });
 
@@ -33,7 +30,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
       // If they are not already on auth page, redirect them
       if (
         window.location.pathname !== "/auth" &&

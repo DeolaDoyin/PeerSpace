@@ -3,20 +3,16 @@ import { notify } from "@/lib/notify";
 import { extractErrorMessage } from "@/lib/errors";
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  Menu,
   Pencil,
   Share2,
   Trash2,
   Check,
   X,
-  LibraryBig,
-  MessageCircle,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import NotificationBell from "@/components/NotificationBell";
-import ThemeToggleButton from "@/components/ThemeToggle";
+import AppNavbar from "@/components/AppNavbar";
 import AnonAvatar from "@/components/AnonAvatar";
 import SettingsItem from "@/components/SettingsItem";
 import { Button } from "@/components/ui/button";
@@ -31,6 +27,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+// ...existing code for Sheet removed; using AlertDialog modal instead
+import ChangePasswordForm from "@/components/ChangePasswordForm";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -44,7 +42,6 @@ const Profile = () => {
   const [profileFieldErrors, setProfileFieldErrors] = useState<
     Record<string, string[]>
   >({});
-
 
   // Admin Category State
   const [catName, setCatName] = useState("");
@@ -66,6 +63,10 @@ const Profile = () => {
       return data;
     },
   });
+
+  // Controlled sheet state for Change Password
+  // Controlled dialog state for Change Password
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -171,8 +172,7 @@ const Profile = () => {
         notify.error(msg);
       } catch {}
     } finally {
-      // 2. Clear the token from storage
-      localStorage.removeItem("token");
+      // 2. Token logic removed. Rely on session invalidation.
 
       // 3. CRITICAL: Wipe the React Query cache
       // This forces the Navbar and other components to re-check auth
@@ -206,12 +206,30 @@ const Profile = () => {
   // Cooldown timer for resend
   const [cooldown, setCooldown] = useState<number>(0);
   const intervalRef = useRef<number | null>(null);
+  // Track when Verify was last clicked (to show Resend button for 30 minutes)
+  const LAST_VERIFY_KEY = "last_verify_clicked_at";
+  const [lastVerifyAt, setLastVerifyAt] = useState<number | null>(() => {
+    try {
+      const v = localStorage.getItem(LAST_VERIFY_KEY);
+      return v ? parseInt(v, 10) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  // Tick setter to force re-render so the 30-minute window UI updates
+  const [, setTick] = useState<number>(0);
+  const verifyIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
         window.clearInterval(intervalRef.current);
         intervalRef.current = null;
+      }
+      if (verifyIntervalRef.current) {
+        window.clearInterval(verifyIntervalRef.current);
+        verifyIntervalRef.current = null;
       }
     };
   }, []);
@@ -235,49 +253,47 @@ const Profile = () => {
     }, 1000) as unknown as number;
   };
 
+  // Keep a ticking timer while lastVerifyAt is set so the UI updates as the 30-minute window expires
+  useEffect(() => {
+    if (lastVerifyAt) {
+      if (verifyIntervalRef.current) {
+        window.clearInterval(verifyIntervalRef.current);
+      }
+      verifyIntervalRef.current = window.setInterval(() => {
+        setTick(Date.now());
+      }, 1000) as unknown as number;
+    } else {
+      if (verifyIntervalRef.current) {
+        window.clearInterval(verifyIntervalRef.current);
+        verifyIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (verifyIntervalRef.current) {
+        window.clearInterval(verifyIntervalRef.current);
+        verifyIntervalRef.current = null;
+      }
+    };
+  }, [lastVerifyAt]);
+
+  const isWithinVerifyWindow = () => {
+    if (!lastVerifyAt) return false;
+    return Date.now() - lastVerifyAt < 30 * 60 * 1000; // 30 minutes
+  };
+
+  const recordVerifyClick = () => {
+    const now = Date.now();
+    try {
+      localStorage.setItem(LAST_VERIFY_KEY, String(now));
+    } catch (e) {}
+    setLastVerifyAt(now);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 transition-colors duration-300">
-     {/* Header */}
-    <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {/* Hamburger removed as requested since BottomNav handles navigation */}
-          <Link to="/">
-            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {/* 
-              These navigation links stay hidden on mobile 
-              because they are redundant with your BottomNav.
-          */}
-          <div className="hidden md:flex items-center gap-2 mr-2">
-            <Link
-              to="/chats"
-              title="Chats"
-              className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </Link>
-            <Link
-              to="/forum"
-              title="Forum"
-              className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
-            >
-              <LibraryBig className="h-5 w-5" />
-            </Link>
-          </div>
-
-          {/* 
-              Moved these OUTSIDE the hidden div.
-              Now Theme and Notifications are always available on mobile profile view. 
-          */}
-          <ThemeToggleButton />
-          <NotificationBell />
-        </div>
-      </div>
-    </header>
+      {/* Navbar */}
+      <AppNavbar />
 
       {/* Profile Card */}
       <div className="px-4 py-6 bg-card">
@@ -296,15 +312,32 @@ const Profile = () => {
                     <div className="text-sm text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
                       Email not verified
                     </div>
-                    <button
-                      onClick={resendVerification}
-                      className="text-sm underline text-primary"
-                      disabled={cooldown > 0}
-                    >
-                      {cooldown > 0
-                        ? `Try again in ${cooldown}s`
-                        : "Resend verification"}
-                    </button>
+                    {/* If user clicked Verify within the last 30 minutes show Resend button + cooldown; otherwise show Verify button */}
+                    {isWithinVerifyWindow() ? (
+                      <button
+                        onClick={async () => {
+                          // Resend verification email
+                          await resendVerification();
+                        }}
+                        className="text-sm underline text-primary"
+                        disabled={cooldown > 0}
+                      >
+                        {cooldown > 0
+                          ? `Try again in ${cooldown}s`
+                          : "Resend verification"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          // Record that user clicked verify and send initial verification
+                          recordVerifyClick();
+                          await resendVerification();
+                        }}
+                        className="text-sm font-medium text-primary underline"
+                      >
+                        Verify
+                      </button>
+                    )}
                   </div>
                 )}
                 <div className="flex gap-2 mt-3">
@@ -442,47 +475,6 @@ const Profile = () => {
         </div>
       )}
 
-      {/* Moderator Gateway */}
-      {(user?.role === "admin" || user?.role === "moderator") && (
-        <div className="mt-4 bg-card">
-          <div className="px-4 py-3 border-b border-border">
-            <h2 className="text-sm font-medium text-orange-500 uppercase tracking-wide flex items-center gap-2">
-              Moderation Tools
-            </h2>
-          </div>
-          <div className="p-4 space-y-3">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Suspend/Restore User
-              </label>
-              <input
-                type="text"
-                value={suspendLogin}
-                onChange={(e) => setSuspendLogin(e.target.value)}
-                className="w-full bg-muted border border-border p-2 rounded text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="User Alias or Email"
-              />
-              <div className="flex gap-2 mt-2">
-                <Button
-                  onClick={() => handleSuspend("suspended")}
-                  disabled={suspending || !suspendLogin.trim()}
-                  className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {suspending ? "Processing..." : "Suspend"}
-                </Button>
-                <Button
-                  onClick={() => handleSuspend("active")}
-                  disabled={suspending || !suspendLogin.trim()}
-                  className="flex-1 bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                >
-                  Restore
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Admin Settings (Only visible to admins) */}
       {user?.role === "admin" && (
         <div className="mt-4 bg-card">
@@ -562,7 +554,49 @@ const Profile = () => {
           </h2>
         </div>
 
-        <SettingsItem label="Change Password" onClick={() => {}} />
+        {/* Change Password Modal (controlled) */}
+        {/** Use controlled AlertDialog so we can close it programmatically after success */}
+        <AlertDialog
+          open={dialogOpen}
+          onOpenChange={(v: boolean) => setDialogOpen(v)}
+        >
+          <AlertDialogTrigger asChild>
+            <div>
+              <SettingsItem
+                label="Change Password"
+                onClick={() => setDialogOpen(true)}
+              />
+            </div>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <div className="relative">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Change Password</AlertDialogTitle>
+                {/* <AlertDialogDescription>
+                  Update your account password. For security, you'll need to
+                  enter your current password.
+                </AlertDialogDescription> */}
+              </AlertDialogHeader>
+
+              {/* Top-right X close button */}
+              <button
+                onClick={() => setDialogOpen(false)}
+                className="absolute right-3 top-3 text-muted-foreground p-1 rounded hover:bg-muted"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <ChangePasswordForm
+                onSuccess={() => {
+                  setDialogOpen(false);
+                }}
+              />
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
         <SettingsItem
           label="Notifications"
           hasArrow={false}

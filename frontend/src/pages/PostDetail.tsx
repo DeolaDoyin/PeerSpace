@@ -142,7 +142,7 @@ const CommentItem = ({
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hover:bg-muted p-0.5 rounded text-muted-foreground z-10"
             title={isCollapsed ? "Expand comment" : "Collapse comment"}
-            aria-pressed={isCollapsed}
+            aria-pressed={Boolean(isCollapsed)}
             aria-label={isCollapsed ? "Expand comment" : "Collapse comment"}
           >
             {isCollapsed ? <Plus size={14} /> : <Minus size={14} />}
