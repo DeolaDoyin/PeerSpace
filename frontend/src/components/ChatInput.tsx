@@ -1,5 +1,5 @@
-// for this to work the [ BROADCAST_CONNECTION=log ] in the .env must be set to log in order for the chats to be posted smoothly without reloading the page, till a proper webserver is added to handle it.
-import { useState, useRef } from "react";
+// for this to work the [ BROADCAST_CONNECTION=log ] in the .env must be set to log
+import { useState, useRef, useEffect } from "react"; // Added useEffect
 import { Plus, Smile, Search, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -13,19 +13,33 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 1. Create a ref for the entire input container
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Quick emoji list for the demo
+  // 2. Add the "Click Outside" logic
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // If the picker is open and we click something NOT inside our containerRef
+      if (showEmojiPicker && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    // Bind the event listener
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      // Unbind the event listener on clean up
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
   const quickEmojis = [
-    // Faces & Emotion
     "😊", "😂", "🤣", "❤️", "😍", "🥰", "😎", "🤔", "🤨", "😐", 
     "🙄", "😏", "😴", "😮", "😱", "😢", "😭", "😤", "😡", "🥳", 
     "😇", "🤠", "🤡", "🤢", "🤯", "🫠", "✨", "🔥", "💯", "💢",
-    
-    // Gestures & People
     "👍", "👎", "🙌", "🙏", "👏", "🤝", "👋", "✌️", "🤘", "🤟", 
     "🤞", "👊", "💪", "🧠", "🫂", "👀",
-    
-    // Symbols & Activities
     "💬", "💭", "📢", "🌈", "☀️", "🌙", "⭐", "🍀", "🎉", "🎈", 
     "🎁", "🏆", "🎮", "🎵", "📷", "📍", "🛡️", "🔑", "🚀"
   ];
@@ -46,50 +60,32 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
-
-  // 1. Check file size first
-  if (file.size > MAX_FILE_SIZE) {
-    toast.error("File is too large", {
-      description: "Attachments are limited to 25MB for security.",
-    });
-    // Clear the input so the user can try a different file
-    e.target.value = "";
-    return;
-  }
-
-  // 2. If size is okay, show the "Coming Soon" status
-  toast.info(`Selected: ${file.name}`, {
-    description: "File upload logic is being integrated into PeerSpace.",
-    action: {
-      label: "Clear",
-      onClick: () => { e.target.value = ""; }
-    },
-  });
-
-  // Future: This is where you'll call your upload API
-  // uploadFile(file);
-};
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const MAX_FILE_SIZE = 25 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File is too large", { description: "Attachments are limited to 25MB." });
+      e.target.value = "";
+      return;
+    }
+    toast.info(`Selected: ${file.name}`, { description: "File upload logic is being integrated." });
+  };
 
   const addEmoji = (emoji: string) => {
     setMessage((prev) => prev + emoji);
-    // Keep focus on the input after adding an emoji
     document.getElementById("chat-input-field")?.focus();
   };
 
   return (
-    <div className="relative p-3 bg-card border-t border-border transition-colors duration-300">
-      {/* Emoji Quick Picker Popover */}
+    // 3. Attach the containerRef here
+    <div ref={containerRef} className="relative p-3 bg-card border-t border-border transition-colors duration-300">
       {showEmojiPicker && (
         <div className="absolute bottom-16 left-4 bg-card border border-border p-3 rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 z-50">
-          {/* Grid Layout for 50+ Emojis */}
           <div className="grid grid-cols-6 gap-1 max-h-56 overflow-y-auto w-64 pr-2 custom-scrollbar">
             {quickEmojis.map((emoji) => (
               <button
                 key={emoji}
+                type="button"
                 onClick={() => addEmoji(emoji)}
                 className="text-xl hover:scale-125 hover:bg-muted transition-all p-2 rounded-lg"
               >
@@ -101,7 +97,6 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
       )}
 
       <div className="flex items-center gap-2">
-        {/* Hidden File Input */}
         <input
           type="file"
           ref={fileInputRef}
@@ -141,7 +136,7 @@ const ChatInput = ({ onSend, disabled = false }: ChatInputProps) => {
             placeholder="Type a message..."
             className="flex-1 bg-transparent outline-none text-sm disabled:opacity-50 text-foreground"
           />
-          <button className="ml-2 text-muted-foreground hover:text-foreground transition-colors">
+          <button type="button" className="ml-2 text-muted-foreground hover:text-foreground transition-colors">
             <Search className="h-4 w-4" />
           </button>
         </div>

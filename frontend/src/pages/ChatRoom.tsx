@@ -2,17 +2,10 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams, useLocation, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import {
-  ArrowLeft,
-  Loader2,
-  MoreVertical,
-  Flag,
-  User,
-} from "lucide-react";
+import { ArrowLeft, Loader2, MoreVertical, Flag, User, ShieldOff } from "lucide-react";
 import api from "@/api/axios";
 // use the project's notify wrapper for consistent toasts
 import { getEcho } from "@/lib/echo";
-import { notify } from "@/lib/notify";
 import MessageBubble from "@/components/MessageBubble";
 import ThemeToggleButton from "@/components/ThemeToggle";
 import ChatInput from "@/components/ChatInput";
@@ -272,6 +265,19 @@ const ChatRoom = () => {
     );
   }
 
+  const handleBlockUser = async () => {
+  if (!chatIdNum) return;
+  try {
+    const res = await api.post(`/api/chats/${chatIdNum}/block-user`);
+    toast.success(res.data.message || "User blocked successfully.");
+    // Usually, you'd want to kick the user back to the chat list after blocking
+    navigate("/chats");
+  } catch (e: any) {
+    console.error("Failed to block user", e);
+    toast.error(e.response?.data?.message || "Failed to block user.");
+  }
+};
+
   return (
     <div className="h-dvh w-full bg-background flex flex-col overflow-hidden transition-colors duration-300">
       <header className="flex-none bg-card border-b border-border px-4 py-3 z-10">
@@ -317,6 +323,47 @@ const ChatRoom = () => {
                     <span>View Profile</span>
                   </Link>
                 </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center cursor-pointer">
+                    <User className="h-4 w-4 mr-2" />
+                    <span>View Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {/* Block User Alert Dialog */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem 
+                      onSelect={(e) => e.preventDefault()} 
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                    >
+                      <ShieldOff className="h-4 w-4 mr-2" />
+                      <span>Block User</span>
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="max-w-xs sm:max-w-md">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Block this peer?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You will no longer receive messages from this user, and they won't be able to see your profile. This action can be undone in your settings.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleBlockUser}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Block
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
 
                 <DropdownMenuSeparator />
 

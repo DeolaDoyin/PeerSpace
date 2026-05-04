@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
+import NotificationBell from "@/components/NotificationBell";
+import ThemeToggleButton from "@/components/ThemeToggle";
 import { extractErrorMessage } from "@/lib/errors";
 import { getEcho } from "@/lib/echo";
 import {
@@ -430,11 +432,9 @@ const PostDetail = () => {
     };
   }, [post?.id, slug, user?.id, queryClient]);
 
-  const handleCommentSubmit = async (
-    e: React.FormEvent,
-    parentId: number | null = null,
-  ) => {
+  const handleCommentSubmit = async (e: React.FormEvent, parentId: number | null = null) => {
     e.preventDefault();
+    
     if (!comment.trim() || !post?.id) return;
 
     setSubmitting(true);
@@ -444,26 +444,22 @@ const PostDetail = () => {
         content: comment,
         parent_id: parentId,
       });
+
       setComment("");
       setIsReplyingToPost(false);
       setReplyingToCommentId(null);
-      await queryClient.invalidateQueries({
-        queryKey: ["post-comments", post.id],
-      });
+      
+      await queryClient.invalidateQueries({ queryKey: ["post-comments", post.id] });
       await queryClient.invalidateQueries({ queryKey: ["post", slug] });
     } catch (err) {
       const e = err as any;
       if (e?.response?.status === 422 && e.response.data?.errors) {
         const first = Object.values(e.response.data.errors)[0];
-        setCommentError(
-          Array.isArray(first) ? String(first[0]) : String(first),
-        );
+        setCommentError(Array.isArray(first) ? String(first[0]) : String(first));
       } else {
         const msg = extractErrorMessage(e) || "Failed to post comment";
         setCommentError(msg);
-        try {
-          notify.error(msg);
-        } catch {}
+        notify.error(msg);
       }
     } finally {
       setSubmitting(false);
@@ -632,17 +628,28 @@ const PostDetail = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border px-4 py-3 z-10 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="p-2 -ml-2 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          aria-label="Go back"
-          title="Go back"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-semibold text-foreground">Post</h1>
+      <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {/* Back Button positioned like the Menu button in Chats */}
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+
+            <h1 className="text-xl font-bold text-foreground">Post</h1>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* Keeping consistent global tools */}
+            <div className="flex items-center gap-2 ml-2">
+              <ThemeToggleButton />
+              <NotificationBell />
+            </div>
+          </div>
+        </div>
       </header>
 
       <main className="max-w-2xl mx-auto">

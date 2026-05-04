@@ -58,6 +58,23 @@ const App = () => (
                 <Route path="/posts/create" element={<CreatePost />} />
                 <Route path="/posts/:slug" element={<PostDetail />} />
                 <Route path="/verify-email" element={<VerifyEmailNotice />} />
+    {/* 1. Added opening ErrorBoundary */}
+    <ErrorBoundary> 
+      <TooltipProvider>
+        <Sonner 
+          position="bottom-center" 
+          richColors 
+          closeButton
+        />
+        <BrowserRouter>
+          {/* 2. Added opening Suspense - Required when using lazy() */}
+          <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+            <Routes>
+              {/* Landing page */}
+              <Route path="/" element={<LandingPage />} />
+
+              {/* Auth page */}
+              <Route path="/auth" element={<Auth />} />
 
                 {/* Other routes */}
                 <Route path="/chats" element={<Chats />} />

@@ -39,11 +39,17 @@ const AppNavbar = ({ centerSlot, extraControls }: AppNavbarProps) => {
   return (
     <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10 transition-colors duration-300">
       <div className="flex items-center justify-between">
-        {/* Left: menu + logo */}
+        {/* Left: menu + logo + extraControls */}
         <div className="flex items-center gap-2">
-          <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
-            <Menu className="h-5 w-5" />
-          </button>
+          {/* If extraControls exists (like your back button), show it; 
+              otherwise show the default menu icon */}
+          {extraControls ? (
+            extraControls
+          ) : (
+            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
 
           <Link to="/">
             <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
