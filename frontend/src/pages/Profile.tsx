@@ -237,42 +237,47 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 transition-colors duration-300">
-      {/* Header */}
-      <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
-              <Menu className="h-5 w-5" />
-            </button>
+     {/* Header */}
+    <header className="sticky top-0 bg-card border-b border-border px-4 py-3 z-10">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {/* Hamburger removed as requested since BottomNav handles navigation */}
+          <Link to="/">
+            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+          </Link>
+        </div>
 
-            <Link to="/">
-              <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+        <div className="flex items-center gap-1">
+          {/* 
+              These navigation links stay hidden on mobile 
+              because they are redundant with your BottomNav.
+          */}
+          <div className="hidden md:flex items-center gap-2 mr-2">
+            <Link
+              to="/chats"
+              title="Chats"
+              className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Link>
+            <Link
+              to="/forum"
+              title="Forum"
+              className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
+            >
+              <LibraryBig className="h-5 w-5" />
             </Link>
           </div>
 
-          <div className="flex items-center gap-1">
-            {/* Web-only quick links to other pages */}
-            <div className="hidden md:flex items-center gap-2 ml-2">
-              <Link
-                to="/chats"
-                title="Chats"
-                className="text-primary p-2 hover:bg-muted rounded-full"
-              >
-                <MessageCircle className="h-5 w-5" />
-              </Link>
-              <Link
-                to="/forum"
-                title="Forum"
-                className="text-primary p-2 hover:bg-muted rounded-full"
-              >
-                <LibraryBig className="h-5 w-5" />
-              </Link>
-              <ThemeToggleButton />
-              <NotificationBell />
-            </div>
-          </div>
+          {/* 
+              Moved these OUTSIDE the hidden div.
+              Now Theme and Notifications are always available on mobile profile view. 
+          */}
+          <ThemeToggleButton />
+          <NotificationBell />
         </div>
-      </header>
+      </div>
+    </header>
 
       {/* Profile Card */}
       <div className="px-4 py-6 bg-card">

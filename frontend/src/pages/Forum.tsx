@@ -28,7 +28,15 @@ import {
   EyeOff,
   Bell,
   User,
+  Menu,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -263,45 +271,70 @@ const Forum = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex justify-between items-center">
-        <div>
-          <Link to="/" className="inline-block">
-            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
-          </Link>
-          {/* <p className="text-sm text-foreground font-medium mt-1">Forum</p> */}
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => refetch()}
-            title="Refresh"
-            className="text-primary hover:bg-muted rounded-full"
-          >
-            <RefreshCcw className="h-5 w-5" />
-          </button>
-
-          <div className="flex items-center gap-1">
-            {/* Web-only quick links to other pages */}
-            <div className="hidden md:flex items-center gap-2 ml-2">
-              <Link
-                to="/chats"
-                title="Chats"
-                className="text-primary p-2 hover:bg-muted rounded-full"
-              >
-                <MessageCircle className="h-5 w-5" />
+    <header className="sticky top-0 bg-card border-b border-border px-4 py-4 z-10 flex justify-between items-center">
+      <div className="flex items-center gap-2">
+        {/* Hamburger Menu for Mobile */}
+        {/* <Sheet>
+          <SheetTrigger asChild>
+            <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors md:hidden">
+              <Menu className="h-5 w-5 text-primary" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="left">
+            <SheetHeader>
+              <SheetTitle className="text-left">PeerSpace Menu</SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col gap-4 mt-8">
+              <Link to="/chats" className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg text-foreground">
+                <MessageCircle className="h-5 w-5" /> Chats
               </Link>
-              <Link
-                to="/profile"
-                title="Profile"
-                className="text-primary p-2 hover:bg-muted rounded-full"
-              >
-                <User className="h-5 w-5" />
+              <Link to="/profile" className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg text-foreground">
+                <User className="h-5 w-5" /> Profile
               </Link>
-              <ThemeToggleButton />
-              <NotificationBell />
+              <Link to="/forum" className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg text-foreground">
+                <RefreshCcw className="h-5 w-5" /> Forum
+              </Link>
             </div>
-          </div>
+          </SheetContent>
+        </Sheet> */}
+
+        <Link to="/" className="inline-block">
+          <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+        </Link>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => refetch()}
+          title="Refresh"
+          className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
+        >
+          <RefreshCcw className="h-5 w-5" />
+        </button>
+
+        {/* Desktop-only links */}
+        <div className="hidden md:flex items-center gap-2">
+          <Link
+            to="/chats"
+            title="Chats"
+            className="text-primary p-2 hover:bg-muted rounded-full"
+          >
+            <MessageCircle className="h-5 w-5" />
+          </Link>
+          <Link
+            to="/profile"
+            title="Profile"
+            className="text-primary p-2 hover:bg-muted rounded-full"
+          >
+            <User className="h-5 w-5" />
+          </Link>
         </div>
-      </header>
+
+        {/* Always visible icons on mobile and desktop */}
+        <ThemeToggleButton />
+        <NotificationBell />
+      </div>
+    </header>
 
       {/* Category Pills (mobile) */}
       <div className="px-4 py-3 border-b border-border bg-card overflow-x-auto whitespace-nowrap hide-scrollbar md:hidden">
