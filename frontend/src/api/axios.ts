@@ -3,7 +3,7 @@ import { notify } from "@/lib/notify";
 import { extractErrorMessage } from "@/lib/errors";
 
 const api = axios.create({
-  baseURL: `http://${window.location.hostname}:8000`,
+  baseURL: import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`,
   withCredentials: true, // Required for Sanctum cookies
   headers: {
     Accept: "application/json",

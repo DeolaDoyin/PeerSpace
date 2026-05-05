@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import LoadingScreen from "@/components/LoadingScreen";
+
 import "@/styles/index.css";
 
 // Lazy-loaded pages
@@ -37,39 +38,42 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ErrorBoundary>
-      <CreatePostProvider>
-        <TooltipProvider>
-          <Sonner position="bottom-center" richColors closeButton />
-          <BrowserRouter>
+    <CreatePostProvider>
+      <TooltipProvider>
+        <Sonner position="bottom-center" richColors closeButton />
+        <BrowserRouter>
+          <ErrorBoundary>
             <Suspense fallback={<LoadingScreen />}>
               <Routes>
-                {/* Landing page */}
+                {/* Landing */}
                 <Route path="/" element={<LandingPage />} />
-                
-                {/* Auth & Verification */}
+
+                {/* Auth */}
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/verify-email" element={<VerifyEmailNotice />} />
 
-                {/* Forum & Posts */}
+                {/* Main app */}
                 <Route path="/forum" element={<Forum />} />
                 <Route path="/posts/create" element={<CreatePost />} />
                 <Route path="/posts/:slug" element={<PostDetail />} />
+                <Route path="/verify-email" element={<VerifyEmailNotice />} />
 
-                {/* Messages & Social */}
+                {/* Chats */}
                 <Route path="/chats" element={<Chats />} />
                 <Route path="/chat/:chatId" element={<ChatRoom />} />
+
+                {/* Other */}
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/contact" element={<Contact />} />
 
-                {/* Redirect any unknown route to landing */}
+                {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </CreatePostProvider>
-    </ErrorBoundary>
+          </ErrorBoundary>
+        </BrowserRouter>
+      </TooltipProvider>
+    </CreatePostProvider>
   </QueryClientProvider>
 );
 
