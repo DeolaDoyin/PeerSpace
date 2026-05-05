@@ -10,8 +10,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import LoadingScreen from "@/components/LoadingScreen";
 
-// Lazy-loaded pages to reduce initial bundle size
+import "@/styles/index.css";
+
+// Lazy-loaded pages
 const Auth = lazy(() => import("@/pages/Auth"));
 const Chats = lazy(() => import("@/pages/Chats"));
 const ChatRoom = lazy(() => import("@/pages/ChatRoom"));
@@ -22,12 +25,8 @@ const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const CreatePost = lazy(() => import("@/pages/CreatePost"));
 const PostDetail = lazy(() => import("@/pages/PostDetail"));
 const VerifyEmailNotice = lazy(() => import("@/pages/VerifyEmailNotice"));
-import LoadingScreen from "@/components/LoadingScreen";
-
-import "@/styles/index.css";
 
 const queryClient = new QueryClient({
-  // cast to any to avoid strict types for onError here
   defaultOptions: {
     queries: {
       onError: (err: any) => {
@@ -39,54 +38,40 @@ const queryClient = new QueryClient({
   } as any,
 });
 
-// eslint-disable-next-line react-refresh/only-export-components
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <CreatePostProvider>
       <TooltipProvider>
         <Sonner position="bottom-center" richColors closeButton />
         <BrowserRouter>
-          <Suspense fallback={<LoadingScreen />}>
-            <ErrorBoundary>
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingScreen />}>
               <Routes>
+                {/* Landing */}
                 <Route path="/" element={<LandingPage />} />
 
+                {/* Auth */}
                 <Route path="/auth" element={<Auth />} />
 
-                {/* After auth, Forum is first page user sees */}
+                {/* Main app */}
                 <Route path="/forum" element={<Forum />} />
                 <Route path="/posts/create" element={<CreatePost />} />
                 <Route path="/posts/:slug" element={<PostDetail />} />
                 <Route path="/verify-email" element={<VerifyEmailNotice />} />
-    {/* 1. Added opening ErrorBoundary */}
-    <ErrorBoundary> 
-      <TooltipProvider>
-        <Sonner 
-          position="bottom-center" 
-          richColors 
-          closeButton
-        />
-        <BrowserRouter>
-          {/* 2. Added opening Suspense - Required when using lazy() */}
-          <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
-            <Routes>
-              {/* Landing page */}
-              <Route path="/" element={<LandingPage />} />
 
-              {/* Auth page */}
-              <Route path="/auth" element={<Auth />} />
-
-                {/* Other routes */}
+                {/* Chats */}
                 <Route path="/chats" element={<Chats />} />
                 <Route path="/chat/:chatId" element={<ChatRoom />} />
+
+                {/* Other */}
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/contact" element={<Contact />} />
 
-                {/* Redirect any unknown route to landing */}
+                {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
-            </ErrorBoundary>
-          </Suspense>
+            </Suspense>
+          </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
     </CreatePostProvider>
