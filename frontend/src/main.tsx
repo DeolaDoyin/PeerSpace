@@ -1,13 +1,11 @@
 // src/main.tsx
 import { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CreatePostProvider } from "@/lib/createPostModal";
 import { notify } from "@/lib/notify";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -52,6 +50,7 @@ const App = () => (
 
                 {/* Auth */}
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/verify-email" element={<VerifyEmailNotice />} />
 
                 {/* Main app */}
                 <Route path="/forum" element={<Forum />} />

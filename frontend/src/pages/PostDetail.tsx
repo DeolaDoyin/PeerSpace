@@ -922,7 +922,7 @@ const PostDetail = () => {
                 setReportError("");
               }}
               placeholder="E.g., Spam, harassing, inappropriate..."
-              className="w-full min-h-[100px] bg-muted border border-border rounded-md p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="w-full min-h-25 bg-muted border border-border rounded-md p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
             />
             {reportError && (
               <p className="text-xs text-red-500 mt-2">{reportError}</p>
