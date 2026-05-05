@@ -30,7 +30,7 @@ COPY . /var/www
 RUN composer install --no-dev --optimize-autoloader
 
 # Setup Nginx config (Render specific)
-COPY ./.render/nginx.conf /etc/nginx/sites-available/default
+COPY .render/nginx.conf /etc/nginx/sites-available/default
 
 # Expose port and start
 EXPOSE 80
