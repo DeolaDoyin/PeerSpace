@@ -26,7 +26,7 @@ WORKDIR /var/www
 # Copy existing application directory contents
 COPY . /var/www
 
-# Set permissions
+# Set permissions before running composer 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
@@ -36,6 +36,16 @@ RUN composer install --no-dev --optimize-autoloader
 # Setup Nginx config (Render specific)
 COPY .render/nginx.conf /etc/nginx/sites-available/default
 
-# Expose port and start
+# --- ADDED: Entrypoint logic to run migrations ---
+# This tells Docker to run these specific commands before the server starts
+RUN echo "#!/bin/sh\nphp artisan migrate --force\nexec \"\$@\"" > /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Expose port
 EXPOSE 80
-CMD service nginx start && php-fpm
+
+# Use the entrypoint script
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# Start Nginx and PHP-FPM
+CMD ["sh", "-c", "service nginx start && php-fpm"]
