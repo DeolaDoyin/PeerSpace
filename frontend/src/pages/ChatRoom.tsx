@@ -6,6 +6,8 @@ import { ArrowLeft, Loader2, MoreVertical, Flag, User, ShieldOff } from "lucide-
 import api from "@/api/axios";
 // use the project's notify wrapper for consistent toasts
 import { getEcho } from "@/lib/echo";
+import notify from "@/lib/notify";
+import { toast } from "@/components/ui/toast";
 import MessageBubble from "@/components/MessageBubble";
 import ThemeToggleButton from "@/components/ThemeToggle";
 import ChatInput from "@/components/ChatInput";
