@@ -1,26 +1,26 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  server: {
-    host: "127.0.0.1",
-    port: 5173,
-  },
   build: {
-    // 1. Increase the limit so small CSS files don't turn "red"/warn as often
-    chunkSizeWarningLimit: 1000, 
+    // We are removing the "manualChunks" entirely for now.
+    // This allows Vite to use its default settings, which are 
+    // much harder to break during deployment.
     rollupOptions: {
       output: {
-        // 2. Simpler chunking: keep core React libraries together to prevent the 'forwardRef' error
-        manualChunks: {
-          'vendor-core': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
-          'vendor-utils': ['date-fns', 'axios', 'pusher-js', 'laravel-echo'],
-          'vendor-ui': ['lucide-react', 'framer-motion', 'sonner'],
-        },
-      },
-    },
-  },
-});
+        manualChunks: undefined 
+      }
+    }
+  }
+})
