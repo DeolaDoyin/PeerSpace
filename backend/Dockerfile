@@ -26,6 +26,10 @@ WORKDIR /var/www
 # Copy existing application directory contents
 COPY . /var/www
 
+# Set permissions
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
