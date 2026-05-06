@@ -9,7 +9,7 @@ const hotlines = [
 
 const resources = [
   { name: "Mentally Aware Nigeria Initiative (MANI)", desc: "The largest youth-run mental health organization in Nigeria", url: "https://mentallyaware.org/" },
-  { name: "She Writes Woman", desc: "24/7 toll-free crisis helpline and free, unlimited teletherapy.", url: "https://www.shewriteswoman.org//" },
+  { name: "She Writes Woman", desc: "24/7 toll-free crisis helpline and free, unlimited teletherapy.", url: "https://www.shewriteswoman.org/" },
   { name: "MyTherapist.ng", desc: "Platform connecting Nigerians with licensed therapists, psychiatrists, and counselors", url: "https://mytherapist.ng/" },
 ];
 

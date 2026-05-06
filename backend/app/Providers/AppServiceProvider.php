@@ -29,6 +29,31 @@ class AppServiceProvider extends ServiceProvider
 
         Broadcast::routes(['middleware' => ['web', 'auth:sanctum']]);
 
+        // Configure custom password reset URL for our decoupled frontend
+        \Illuminate\Auth\Notifications\ResetPassword::createUrlUsing(function (User $user, string $token) {
+            return env('FRONTEND_URL', 'http://localhost:5173') . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
+        });
+
+        // Configure custom email verification URL for our decoupled frontend
+        \Illuminate\Auth\Notifications\VerifyEmail::createUrlUsing(function ($notifiable) {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+
+            $verifyUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                'verification.verify',
+                \Illuminate\Support\Carbon::now()->addMinutes(\Illuminate\Support\Facades\Config::get('auth.verification.expire', 60)),
+                [
+                    'id' => $notifiable->getKey(),
+                    'hash' => sha1($notifiable->getEmailForVerification()),
+                ]
+            );
+
+            // Parse the generated backend URL and append its query parameters to the frontend route
+            $parsedUrl = parse_url($verifyUrl);
+            $query = $parsedUrl['query'] ?? '';
+
+            return $frontendUrl . '/verify-email/confirm?id=' . $notifiable->getKey() . '&hash=' . sha1($notifiable->getEmailForVerification()) . '&' . $query;
+        });
+
         // The 'before' check runs before any other policy
         Gate::before(function (User $user, string $ability) {
             if ($user->role === 'admin') {

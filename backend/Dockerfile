@@ -36,16 +36,6 @@ RUN composer install --no-dev --optimize-autoloader
 # Setup Nginx config (Render specific)
 COPY .render/nginx.conf /etc/nginx/sites-available/default
 
-# --- ADDED: Entrypoint logic to run migrations ---
-# This tells Docker to run these specific commands before the server starts
-RUN echo "#!/bin/sh\nphp artisan migrate --force\nexec \"\$@\"" > /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
 # Expose port
 EXPOSE 80
-
-# Use the entrypoint script
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-# Start Nginx and PHP-FPM
-CMD ["sh", "-c", "service nginx start && php-fpm"]
+CMD service nginx start && php-fpm

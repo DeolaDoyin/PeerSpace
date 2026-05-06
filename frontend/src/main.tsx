@@ -23,6 +23,10 @@ const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const CreatePost = lazy(() => import("@/pages/CreatePost"));
 const PostDetail = lazy(() => import("@/pages/PostDetail"));
 const VerifyEmailNotice = lazy(() => import("@/pages/VerifyEmailNotice"));
+const VerifyEmailConfirm = lazy(() => import("@/pages/VerifyEmailConfirm"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const SavedPosts = lazy(() => import("@/pages/SavedPosts"));
+const UserProfile = lazy(() => import("@/pages/UserProfile"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,6 +55,8 @@ const App = () => (
                 {/* Auth */}
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/verify-email" element={<VerifyEmailNotice />} />
+                <Route path="/verify-email/confirm" element={<VerifyEmailConfirm />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 {/* Main app */}
                 <Route path="/forum" element={<Forum />} />
@@ -64,6 +70,8 @@ const App = () => (
 
                 {/* Other */}
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/saved-posts" element={<SavedPosts />} />
+                <Route path="/users/:userId" element={<UserProfile />} />
                 <Route path="/contact" element={<Contact />} />
 
                 {/* Fallback */}

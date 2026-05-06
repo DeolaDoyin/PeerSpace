@@ -172,6 +172,30 @@ class PostController extends Controller
             'is_followed' => $user->followedPosts()->where('post_id', $post->id)->exists()
         ]);
     }
+
+    public function saved(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $posts = $user->savedPosts()
+            ->with(['creator', 'category'])
+            ->withCount('comments')
+            ->withCount('likes')
+            ->withExists(['savedByUsers as is_saved' => function ($q) {
+                $q->where('user_id', auth()->id());
+            }])
+            ->withExists(['followedByUsers as is_followed' => function ($q) {
+                $q->where('user_id', auth()->id());
+            }])
+            ->withExists(['likes as is_liked' => function ($q) {
+                $q->where('user_id', auth()->id());
+            }])
+            ->orderByPivot('created_at', 'desc')
+            ->paginate(15);
+
+        return response()->json($posts);
+    }
+
     public function destroy(Post $post): JsonResponse
     {
         // Authorize the deletion via policy (owner or admin)

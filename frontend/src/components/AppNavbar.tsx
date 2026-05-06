@@ -1,5 +1,6 @@
 import {
-  Menu,
+  // Menu,
+  Heart,
   RefreshCcw,
   User,
   LibraryBig,
@@ -43,16 +44,17 @@ const AppNavbar = ({ centerSlot, extraControls }: AppNavbarProps) => {
         <div className="flex items-center gap-2">
           {/* If extraControls exists (like your back button), show it; 
               otherwise show the default menu icon */}
-          {extraControls ? (
+          {/* {extraControls ? (
             extraControls
           ) : (
             <button className="p-2 -ml-2 hover:bg-muted rounded-full transition-colors">
               <Menu className="h-5 w-5" />
             </button>
-          )}
+          )} */}
 
-          <Link to="/">
-            <h1 className="text-xl font-bold text-primary">PeerSpace</h1>
+          <Link to="/"  className="flex items-center gap-2">
+            <Heart className="h-6 w-6 text-primary fill-primary/20" />
+            <h1 className="text-xl font-bold text-foreground">PeerSpace</h1>          
           </Link>
         </div>
 

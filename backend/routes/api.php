@@ -12,12 +12,20 @@ use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\UserProfileController;
 use App\Services\RedditAliasService;
+use App\Http\Controllers\PasswordResetController;
 
 Route::middleware(['throttle:auth'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])->middleware('guest')->name('password.email');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('guest')->name('password.store');
 });
+
+Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\VerificationController::class, 'verify'])
+    ->middleware(['signed'])
+    ->name('verification.verify');
 
 Route::get('/auth/suggest-username', function () {
     return response(RedditAliasService::getNewAlias());
@@ -32,6 +40,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('/users/{user}/profile', [UserProfileController::class, 'show']);
     Route::put('/user', [AuthController::class, 'updateProfile']);
 
     // Change password for the authenticated user (frontend posts to /api/user/password)
@@ -40,6 +49,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Posts
     Route::get('posts', [PostController::class, 'index']);
+    Route::get('posts/saved', [PostController::class, 'saved']);
     Route::get('posts/{post:slug}', [PostController::class, 'show'])->name('posts.show');
     // Keep delete (destroy) restricted to moderators via explicit route below
     Route::resource('posts', PostController::class)
@@ -86,6 +96,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Throttle: 6 requests per minute per user (adjust as needed)
     Route::post('/email/verification-notification', [\App\Http\Controllers\VerificationController::class, 'resend'])
         ->middleware('throttle:6,1');
+        
+    // The actual verification route doesn't strictly need auth:sanctum if it's signed,
+    // but typically we can place it here or outside. We will place it outside so unauthenticated users can click the link.
 
     // Reports (User)
     Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:post-write');

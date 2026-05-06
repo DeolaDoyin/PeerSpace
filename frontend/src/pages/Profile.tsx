@@ -29,11 +29,11 @@ import {
 } from "@/components/ui/alert-dialog";
 // ...existing code for Sheet removed; using AlertDialog modal instead
 import ChangePasswordForm from "@/components/ChangePasswordForm";
+import AboutUsModal from "@/components/AboutUsModal";
 
 const Profile = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [notifications, setNotifications] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -67,6 +67,7 @@ const Profile = () => {
   // Controlled sheet state for Change Password
   // Controlled dialog state for Change Password
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [aboutModalOpen, setAboutModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -598,11 +599,8 @@ const Profile = () => {
           </AlertDialogContent>
         </AlertDialog>
         <SettingsItem
-          label="Notifications"
-          hasArrow={false}
-          hasCheckbox
-          checked={notifications}
-          onCheckedChange={setNotifications}
+          label="Saved Posts"
+          onClick={() => navigate("/saved-posts")}
         />
       </div>
 
@@ -613,7 +611,7 @@ const Profile = () => {
           onClick={() => navigate("/#crisis")}
         />
         <SettingsItem label="Contact Us" onClick={() => navigate("/contact")} />
-        <SettingsItem label="About Us" onClick={() => {}} />
+        <SettingsItem label="About Us" onClick={() => setAboutModalOpen(true)} />
       </div>
 
       {/* Danger Zone */}
@@ -652,6 +650,8 @@ const Profile = () => {
           Log Out
         </Button>
       </div>
+
+      <AboutUsModal isOpen={aboutModalOpen} onOpenChange={setAboutModalOpen} />
 
       <BottomNav />
     </div>
