@@ -26,12 +26,16 @@ WORKDIR /var/www
 # Copy existing application directory contents
 COPY . /var/www
 
+# Set permissions before running composer 
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
 # Setup Nginx config (Render specific)
 COPY .render/nginx.conf /etc/nginx/sites-available/default
 
-# Expose port and start
+# Expose port
 EXPOSE 80
 CMD service nginx start && php-fpm
