@@ -6,6 +6,7 @@ import FloatingInput from "@/components/FloatingInput";
 import ThemeToggleButton from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
+import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 
 // (Previously declared SocialButton removed because it wasn't used)
 
@@ -20,6 +21,7 @@ const Auth = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingAlias, setIsLoadingAlias] = useState(false);
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
   const fetchSuggestion = async () => {
     setIsLoadingAlias(true);
@@ -224,21 +226,34 @@ const Auth = () => {
               />
             )}
 
-            <FloatingInput
-              label="Enter Password"
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setErrors((prev) => {
-                  const copy = { ...prev };
-                  delete copy.password;
-                  return copy;
-                });
-              }}
-              error={errors.password}
-              autoComplete={isLogin ? "current-password" : "new-password"}
-            />
+            <div className="space-y-2">
+              <FloatingInput
+                label="Enter Password"
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setErrors((prev) => {
+                    const copy = { ...prev };
+                    delete copy.password;
+                    return copy;
+                  });
+                }}
+                error={errors.password}
+                autoComplete={isLogin ? "current-password" : "new-password"}
+              />
+              {isLogin && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotModalOpen(true)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
+            </div>
 
             {!isLogin && (
               <FloatingInput
@@ -298,6 +313,11 @@ const Auth = () => {
               )}
             </Button>
           </form>
+
+          <ForgotPasswordModal
+            isOpen={isForgotModalOpen}
+            onOpenChange={setIsForgotModalOpen}
+          />
 
           <div className="space-y-4">
             <div className="text-center text-sm text-muted-foreground">

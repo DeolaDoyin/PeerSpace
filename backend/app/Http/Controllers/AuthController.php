@@ -28,6 +28,8 @@ class AuthController extends Controller
             'account_status' => 'active', // Default status from your ERD
         ]);
 
+        event(new \Illuminate\Auth\Events\Registered($user));
+
         Auth::login($user);
 
         return response()->json(['user' => $user, 'message' => 'Registration successful'], 201);

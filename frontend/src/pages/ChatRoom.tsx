@@ -6,6 +6,8 @@ import { ArrowLeft, Loader2, MoreVertical, Flag, User, ShieldOff } from "lucide-
 import api from "@/api/axios";
 // use the project's notify wrapper for consistent toasts
 import { getEcho } from "@/lib/echo";
+import notify from "@/lib/notify";
+import { toast } from "@/components/ui/toast";
 import MessageBubble from "@/components/MessageBubble";
 import ThemeToggleButton from "@/components/ThemeToggle";
 import ChatInput from "@/components/ChatInput";
@@ -123,15 +125,14 @@ const ChatRoom = () => {
       const { data } = await api.get<ChatListRow[]>("/api/chats");
       return data;
     },
-    enabled: Boolean(
-      user?.id && !peerNameFromNav && Number.isFinite(chatIdNum),
-    ),
+    enabled: Boolean(user?.id && Number.isFinite(chatIdNum)),
   });
 
   const peerName =
     peerNameFromNav ??
     chatRows?.find((c) => c.id === chatIdNum)?.peer?.name ??
     "Peer";
+  const peerId = chatRows?.find((c) => c.id === chatIdNum)?.peer?.id;
 
   const {
     data: messagesPage,
@@ -316,18 +317,12 @@ const ChatRoom = () => {
                 {/* Link to Profile Page */}
                 <DropdownMenuItem asChild>
                   <Link
-                    to="/profile"
+                    to={peerId ? `/users/${peerId}` : "#"}
+                    onClick={(e) => {
+                      if (!peerId) e.preventDefault();
+                    }}
                     className="flex items-center cursor-pointer"
                   >
-                    <User className="h-4 w-4 mr-2" />
-                    <span>View Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center cursor-pointer">
                     <User className="h-4 w-4 mr-2" />
                     <span>View Profile</span>
                   </Link>
@@ -364,8 +359,6 @@ const ChatRoom = () => {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-
-                <DropdownMenuSeparator />
 
                 {/* Report User Alert Dialog */}
                 <AlertDialog>

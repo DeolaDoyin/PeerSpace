@@ -43,7 +43,8 @@ api.interceptors.response.use(
     try {
       const msg = extractErrorMessage(error);
       // Avoid spamming toasts for expected 422 validation on form pages (caller may handle)
-      if (error.response?.status !== 422) {
+      // And avoid toasting on 401 which is an expected state for unauthenticated users checking session
+      if (error.response?.status !== 422 && error.response?.status !== 401) {
         notify.error(msg);
       }
     } catch (e) {

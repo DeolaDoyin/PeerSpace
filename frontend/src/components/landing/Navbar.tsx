@@ -94,7 +94,7 @@ const Navbar = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-72">
               <SheetHeader className="text-left">
-                <SheetTitle>Navigation Menu</SheetTitle>
+                <SheetTitle>Menu</SheetTitle>
                 <SheetDescription>
                   Browse PeerSpace resources and community links.
                 </SheetDescription>
