@@ -14,7 +14,7 @@ const navLinks = [
 
 const Navbar = () => {
   // --- Auth Check ---
-  const { data: user, isLoading } = useQuery({
+  const { data: user } = useQuery({
     queryKey: ['user'],
     queryFn: async () => {
       try {
@@ -65,22 +65,21 @@ const Navbar = () => {
             </>
           )}
 
-          {!isLoading &&
-            (user ? (
-              <Link
-                to="/profile"
-                title="Profile"
-                className="hidden sm:inline-flex text-primary p-2 hover:bg-muted rounded-full transition-colors"
-              >
-                <User className="h-5 w-5" />
-              </Link>
-            ) : (
-              <Link to="/auth" className="hidden sm:inline-flex">
-                <Button size="sm" variant="default">
-                  Sign In
-                </Button>
-              </Link>
-            ))}
+          {user ? (
+            <Link
+              to="/profile"
+              title="Profile"
+              className="hidden sm:inline-flex text-primary p-2 hover:bg-muted rounded-full transition-colors"
+            >
+              <User className="h-5 w-5" />
+            </Link>
+          ) : (
+            <Link to="/auth" className="hidden sm:inline-flex">
+              <Button size="sm" variant="default">
+                Sign In
+              </Button>
+            </Link>
+          )}
 
             
           <ThemeToggleButton />
@@ -122,28 +121,27 @@ const Navbar = () => {
                   </>
                 )}
 
-                {!isLoading &&
-                  (user ? (
-                    <Link to="/profile" className="mt-4">
-                      <Button
-                        size="default"
-                        variant="outline"
-                        className="w-full gap-2"
-                      >
-                        <User className="h-4 w-4" /> Go to Profile
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link to="/auth" className="mt-4">
-                      <Button
-                        size="default"
-                        variant="default"
-                        className="w-full"
-                      >
-                        Sign In
-                      </Button>
-                    </Link>
-                  ))}
+                {user ? (
+                  <Link to="/profile" className="mt-4">
+                    <Button
+                      size="default"
+                      variant="outline"
+                      className="w-full gap-2"
+                    >
+                      <User className="h-4 w-4" /> Go to Profile
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link to="/auth" className="mt-4">
+                    <Button
+                      size="default"
+                      variant="default"
+                      className="w-full"
+                    >
+                      Sign In
+                    </Button>
+                  </Link>
+                )}
               </div>
             </SheetContent>
           </Sheet>
