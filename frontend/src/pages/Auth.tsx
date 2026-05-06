@@ -96,7 +96,12 @@ const Auth = () => {
         response.data?.user &&
         !response.data.user.email_verified_at
       ) {
-        navigate("/verify-email");
+        navigate("/verify-email", {
+          state: {
+            login: email,
+            password,
+          },
+        });
       } else {
         navigate("/forum");
       }
@@ -319,7 +324,7 @@ const Auth = () => {
             onOpenChange={setIsForgotModalOpen}
           />
 
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <div className="text-center text-sm text-muted-foreground">
               Or sign up with
             </div>
@@ -380,7 +385,7 @@ const Auth = () => {
                 </svg>
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

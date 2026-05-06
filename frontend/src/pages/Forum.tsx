@@ -120,14 +120,14 @@ const Forum = () => {
     },
   });
 
-  const fetchPosts = async ({ pageParam = 1 }): Promise<PaginatedResponse> => {
-    const url =
-      selectedCategory === "All"
-        ? `/api/posts?page=${pageParam}`
-        : `/api/categories/${selectedCategory}/posts?page=${pageParam}`;
+
+  async function fetchPosts({ pageParam = 1 }): Promise<PaginatedResponse> {
+    const url = selectedCategory === "All"
+      ? `/api/posts?page=${pageParam}`
+      : `/api/categories/${selectedCategory}/posts?page=${pageParam}`;
     const { data } = await api.get(url);
     return data;
-  };
+  }
 
   // useInfiniteQuery
   const FORUM_POLL_MS = 60_000;
@@ -386,7 +386,10 @@ const Forum = () => {
             {/* Success State - Flattening the pages array */}
             {data?.pages.map((page: PaginatedResponse, i: number) => (
               <React.Fragment key={i}>
-                {page.data.map((post: Post) => (
+                {page.data.map((post: Post) => {
+                  const peerId = post.creator?.id;
+
+                  return (
                   <Card
                     key={post.id}
                     className="p-4 hover:shadow-md transition-shadow border-border"
@@ -395,7 +398,7 @@ const Forum = () => {
                       <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                         {post.creator?.name?.[0] || "A"}
                       </div>
-                      <div
+                      {/* <div
                         className="flex flex-col cursor-pointer group"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -406,10 +409,20 @@ const Forum = () => {
                               post.creator?.name || "Peer",
                             );
                         }}
-                      >
-                        <span className="text-xs font-semibold text-foreground group-hover:underline">
-                          {post.creator?.name || "Anonymous"}
-                        </span>
+                      > */}
+                      <div className="flex flex-col group">
+                        <Link
+                          to={peerId ? `/users/${peerId}` : "#"}
+                          onClick={(e) => {
+                            if (!peerId) e.preventDefault();
+                          }}
+                          className="flex items-center cursor-pointer"
+                        >
+                          <span className="text-xs font-semibold text-foreground group-hover:underline">
+                            {post.creator?.name || "Anonymous"}
+                          </span>
+                        </Link>
+
                         <span className="text-[10px] text-muted-foreground">
                           {post.created_at
                             ? formatDistanceToNow(new Date(post.created_at)) +
@@ -579,7 +592,7 @@ const Forum = () => {
                       </div>
                     </div>
                   </Card>
-                ))}
+                )})}
               </React.Fragment>
             ))}
 

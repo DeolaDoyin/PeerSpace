@@ -9,9 +9,33 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
+use Illuminate\Auth\Events\Registered;
+use App\Services\RedditAliasService;
 
 class AuthController extends Controller
 {
+    // #region agent log
+    private function agentLog(string $hypothesisId, string $message, array $data = []): void
+    {
+        try {
+            file_put_contents(
+                base_path('../debug-e43b30.log'),
+                json_encode([
+                    'sessionId' => 'e43b30',
+                    'runId' => 'initial',
+                    'hypothesisId' => $hypothesisId,
+                    'location' => 'AuthController.php',
+                    'message' => $message,
+                    'data' => $data,
+                    'timestamp' => round(microtime(true) * 1000),
+                ]) . PHP_EOL,
+                FILE_APPEND
+            );
+        } catch (\Throwable $e) {
+        }
+    }
+    // #endregion
+
     // 1. Register a new user
     public function register(Request $request)
     {
@@ -163,21 +187,68 @@ class AuthController extends Controller
         try {
             $socialUser = Socialite::driver($provider)->stateless()->user();
             $user = User::where('email', $socialUser->getEmail())->first();
+            $created = false;
 
             if (!$user) {
                 $user = User::create([
-                    'name' => 'Anon_' . Str::random(6),
+                    'name' => RedditAliasService::getNewAlias(),
                     'email' => $socialUser->getEmail(),
                     'password' => Hash::make(Str::random(24)),
                     'account_status' => 'active',
                 ]);
+                $created = true;
             }
 
             Auth::login($user);
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+
+            // For newly-created social accounts, send verification email and
+            // route them through the same verification flow as regular signup.
+            if ($created && !$user->email_verified_at) {
+                // #region agent log
+                $this->agentLog('H4', 'social_registered_dispatching', [
+                    'provider' => $provider,
+                    'user_id' => $user->id,
+                    'created' => $created,
+                    'email_verified' => (bool) $user->email_verified_at,
+                ]);
+                // #endregion
+                event(new Registered($user));
+            }
+            // #region agent log
+            $this->agentLog('H4', 'social_user_state_after_login', [
+                'provider' => $provider,
+                'user_id' => $user->id,
+                'created' => $created,
+                'email_verified' => (bool) $user->email_verified_at,
+            ]);
+            // #endregion
             
-            return redirect()->away($frontendUrl . "/auth#oauth_success");
+            \Log::info('User redirecting to verification:', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'target_url' => $frontendUrl . "/verify-email"
+            ]);
+
+            if (!$user->email_verified_at) {
+                // #region agent log
+                $this->agentLog('H4', 'social_redirect_verify_email', [
+                    'provider' => $provider,
+                    'user_id' => $user->id,
+                ]);
+                // #endregion
+                return redirect()->away($frontendUrl . "/verify-email");
+            }
+
+            return redirect()->away($frontendUrl . "/forum");
         } catch (\Exception $e) {
+            // #region agent log
+            $this->agentLog('H4', 'social_callback_exception', [
+                'provider' => $provider,
+                'exception_class' => get_class($e),
+                'exception_message' => $e->getMessage(),
+            ]);
+            // #endregion
             \Log::error('Socialite Error', ['exception' => $e]);
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
             return redirect()->away($frontendUrl . "/auth?error=oauth_failed");

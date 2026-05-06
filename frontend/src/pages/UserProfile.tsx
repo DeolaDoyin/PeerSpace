@@ -6,6 +6,7 @@ import api from "@/api/axios";
 import AppNavbar from "@/components/AppNavbar";
 import BottomNav from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
+import AnonAvatar from "@/components/AnonAvatar";
 
 interface ProfilePost {
   id: number;
@@ -61,45 +62,69 @@ const UserProfile = () => {
         </button>
       </div>
 
-      <main className="p-4 space-y-4">
-        {isLoading && (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        )}
+      {/* Profile Header with Banner */}
+      <div className="bg-card border-b border-border">
+        {/* Colorful Gradient Banner */}
+        <div className="h-28 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+        
+        <div className="px-4 pb-6 relative">
+          {isLoading && (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
 
-        {isError && (
-          <Card className="p-8 border-destructive bg-destructive/10 text-center">
-            <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-            <p className="text-destructive font-medium">Failed to load profile</p>
-            <button className="text-sm underline mt-2" onClick={() => refetch()}>
-              Try again
-            </button>
-          </Card>
-        )}
+          {isError && (
+            <div className="mt-4 p-4 border border-destructive bg-destructive/10 text-center rounded-lg max-w-md mx-auto">
+              <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
+              <p className="text-destructive font-medium text-sm">Failed to load profile</p>
+              <button className="text-xs underline mt-2 text-destructive" onClick={() => refetch()}>
+                Try again
+              </button>
+            </div>
+          )}
 
-        {!isLoading && !isError && profile && (
-          <>
-            <Card className="p-4">
-              <h1 className="text-xl font-bold text-foreground">{profile.user.name}</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                {profile.posts.length} posts • {profile.comments.length} comments
-              </p>
-            </Card>
+          {!isLoading && !isError && profile && (
+            <div className="-mt-12 flex items-end gap-4">
+              <div className="rounded-full border-4 border-card bg-card shadow-sm">
+                <AnonAvatar size="xl" />
+              </div>
+              <div className="flex-1 pb-1">
+                <h1 className="text-2xl font-bold text-foreground">
+                  {profile.user.name}
+                </h1>
+                <p className="text-sm font-medium text-primary mt-1">
+                  {profile.posts.length} posts • {profile.comments.length} comments
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+      {!isLoading && !isError && profile && (
+        <>
+          {/* Posts Section */}
+          <div className="mt-4 bg-card">
+            <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+              <div className="h-4 w-1 bg-blue-500 rounded-full"></div>
+              <h2 className="text-sm font-medium text-blue-500 uppercase tracking-wide">
                 Posts
               </h2>
+            </div>
+            <div className="p-4 space-y-3">
               {profile.posts.length === 0 ? (
-                <Card className="p-4 text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   No posts yet.
-                </Card>
+                </p>
               ) : (
                 profile.posts.map((post) => (
-                  <Card key={post.id} className="p-4">
+                  <Card
+                    key={post.id}
+                    className="rounded-xl border-border p-4 transition-colors hover:border-primary/40 bg-muted/30 shadow-none"
+                  >
                     <Link to={`/posts/${post.slug}`} className="block">
-                      <h3 className="font-semibold text-foreground mb-1 hover:underline">
+                      <h3 className="mb-1 font-semibold text-foreground hover:underline">
                         {post.title}
                       </h3>
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
@@ -120,23 +145,32 @@ const UserProfile = () => {
                   </Card>
                 ))
               )}
-            </section>
+            </div>
+          </div>
 
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {/* Comments Section */}
+          <div className="mt-4 bg-card">
+            <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+              <div className="h-4 w-1 bg-purple-500 rounded-full"></div>
+              <h2 className="text-sm font-medium text-purple-500 uppercase tracking-wide">
                 Comments
               </h2>
+            </div>
+            <div className="p-4 space-y-3">
               {profile.comments.length === 0 ? (
-                <Card className="p-4 text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground text-center py-4">
                   No comments yet.
-                </Card>
+                </p>
               ) : (
                 profile.comments.map((comment) => (
-                  <Card key={comment.id} className="p-4">
+                  <Card
+                    key={comment.id}
+                    className="rounded-xl border-border p-4 transition-colors hover:border-primary/40 bg-muted/30 shadow-none"
+                  >
                     <p className="text-sm text-foreground whitespace-pre-wrap">
                       {comment.content}
                     </p>
-                    <div className="mt-2 text-xs text-muted-foreground">
+                    <div className="mt-3 text-xs text-muted-foreground">
                       <span>
                         {comment.created_at
                           ? `${formatDistanceToNow(new Date(comment.created_at))} ago`
@@ -145,7 +179,7 @@ const UserProfile = () => {
                       {comment.post && (
                         <Link
                           to={`/posts/${comment.post.slug}`}
-                          className="ml-2 underline hover:text-foreground"
+                          className="ml-2 underline hover:text-foreground font-medium"
                         >
                           on {comment.post.title}
                         </Link>
@@ -154,10 +188,10 @@ const UserProfile = () => {
                   </Card>
                 ))
               )}
-            </section>
-          </>
-        )}
-      </main>
+            </div>
+          </div>
+        </>
+      )}
 
       <BottomNav />
     </div>
