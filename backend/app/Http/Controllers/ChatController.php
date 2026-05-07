@@ -12,13 +12,14 @@ class ChatController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
 
-        $chats = $user->chats()
+        $paginator = $user->chats()
             ->with(['latestMessage.sender', 'users'])
             ->orderByDesc('chats.updated_at')
-            ->get();
+            ->paginate($perPage);
 
-        $payload = $chats->map(function (Chat $chat) use ($user) {
+        $payload = $paginator->getCollection()->map(function (Chat $chat) use ($user) {
             $peer = $chat->type === 'direct'
                 ? $chat->users->firstWhere('id', '!=', $user->id)
                 : null;
@@ -46,7 +47,13 @@ class ChatController extends Controller
             ];
         });
 
-        return response()->json($payload);
+        return response()->json([
+            'data' => $payload,
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+        ]);
     }
 
     public function store(Request $request, ChatService $chats): JsonResponse

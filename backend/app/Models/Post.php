@@ -49,11 +49,26 @@ class Post extends Model
         parent::boot();
         
         static::creating(function ($post) {
-            $post->slug = Str::slug($post->title);
+            $post->slug = static::generateUniqueSlug($post->title);
         });
         static::updating(function ($post) {
-            $post->slug = Str::slug($post->title);
+            $post->slug = static::generateUniqueSlug($post->title, $post->id);
         });
+    }
+
+    protected static function generateUniqueSlug(string $title, ?int $excludeId = null): string
+    {
+        $baseSlug = Str::slug($title);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (static::where('slug', $slug)->when($excludeId, function ($query) use ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        })->exists()) {
+            $slug = $baseSlug . '-' . $counter++;
+        }
+
+        return $slug;
     }
 
     public function savedByUsers()

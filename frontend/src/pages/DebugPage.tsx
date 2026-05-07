@@ -17,9 +17,8 @@ const DebugPage = () => {
       })
       .catch((err) => {
         setStatus("Connection Failed.");
-        const e = err as any;
         const msg =
-          extractErrorMessage(e) || e?.message || "Connection failed.";
+          extractErrorMessage(err) || (err instanceof Error ? err.message : "Connection failed.");
         setError(msg);
         try {
           notify.error(msg);

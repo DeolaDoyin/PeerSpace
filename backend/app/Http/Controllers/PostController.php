@@ -118,12 +118,13 @@ class PostController extends Controller
     public function report(Request $request, Post $post)
     {
     try {
-        $exists = Report::where('reportable_id', $post->id)
+        $exists = Report::where('user_id', auth()->id())
+                    ->where('reportable_id', $post->id)
                     ->where('reportable_type', Post::class)
                     ->exists();
 
         if ($exists) {
-            return response()->json(['message' => 'This post has already been reported and is currently under invertigation'], 422);
+            return response()->json(['message' => 'You have already reported this post.'], 422);
         }
 
         Report::create([
@@ -137,8 +138,8 @@ class PostController extends Controller
 
         return response()->json(['message' => 'Report submitted to moderators.']);
     } catch (\Exception $e) {
-        // This will return the actual error message to your console log
-        return response()->json(['error' => $e->getMessage()], 500);
+        \Log::error('Failed to report post', ['post_id' => $post->id, 'error' => $e->getMessage()]);
+        return response()->json(['error' => 'Failed to submit report. Please try again later.'], 500);
     }
     }
 

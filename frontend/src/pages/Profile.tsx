@@ -6,10 +6,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   Pencil,
-  Share2,
+  Bookmark,
   Trash2,
   Check,
   X,
+  FileText,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import AppNavbar from "@/components/AppNavbar";
@@ -48,13 +49,17 @@ const Profile = () => {
   const [catDesc, setCatDesc] = useState("");
   const [creatingCat, setCreatingCat] = useState(false);
 
-  // Admin Promotion State
+  // Admin Promotion / Moderation
   const [promoteLogin, setPromoteLogin] = useState("");
   const [promoting, setPromoting] = useState(false);
-
-  // Moderator Suspend State
   const [suspendLogin, setSuspendLogin] = useState("");
   const [suspending, setSuspending] = useState(false);
+
+  // Modals
+  const [aboutModalOpen, setAboutModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: user, isLoading } = useQuery({
     queryKey: ["user"],
@@ -63,11 +68,6 @@ const Profile = () => {
       return data;
     },
   });
-
-  // Controlled sheet state for Change Password
-  // Controlled dialog state for Change Password
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [aboutModalOpen, setAboutModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -85,15 +85,18 @@ const Profile = () => {
       setProfileFieldErrors({});
       setProfileError("");
       notify.success("Profile updated");
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle validation errors
-      if (error?.response?.status === 422 && error.response.data?.errors) {
-        setProfileFieldErrors(error.response.data.errors || {});
-        const first = Object.values(error.response.data.errors)[0];
-        setProfileError(
-          Array.isArray(first) ? String(first[0]) : String(first),
-        );
-        return;
+      if (error && typeof error === "object" && "response" in error) {
+        const e = error as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } };
+        if (e?.response?.status === 422 && e.response.data?.errors) {
+          setProfileFieldErrors(e.response.data.errors || {});
+          const first = Object.values(e.response.data.errors)[0];
+          setProfileError(
+            Array.isArray(first) ? String(first[0]) : String(first),
+          );
+          return;
+        }
       }
 
       // Non-validation error
@@ -117,8 +120,7 @@ const Profile = () => {
       await queryClient.invalidateQueries({ queryKey: ["categories"] });
       notify.success("Category created successfully!");
     } catch (error) {
-      const e = error as any;
-      const msg = extractErrorMessage(e) || "Failed to create category";
+      const msg = extractErrorMessage(error) || "Failed to create category";
       try {
         notify.error(msg);
       } catch {}
@@ -155,10 +157,25 @@ const Profile = () => {
       });
       notify.success(res.data.message);
       setSuspendLogin("");
-    } catch (error: any) {
+    } catch (error) {
       notify.error(extractErrorMessage(error));
     } finally {
       setSuspending(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await api.delete("/api/user");
+      queryClient.clear();
+      navigate("/auth");
+      notify.success("Account deleted permanently.");
+    } catch (error) {
+      const msg = extractErrorMessage(error) || "Failed to delete account.";
+      notify.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -167,8 +184,7 @@ const Profile = () => {
       // 1. Tell the server to invalidate the session
       await api.post("/api/logout");
     } catch (error) {
-      const e = error as any;
-      const msg = extractErrorMessage(e) || "Server logout failed";
+      const msg = extractErrorMessage(error) || "Server logout failed";
       try {
         notify.error(msg);
       } catch {}
@@ -188,15 +204,18 @@ const Profile = () => {
     try {
       await api.post("/api/email/verification-notification");
       notify.success("Verification email sent. Check your inbox.");
-    } catch (error: any) {
-      if (error?.response?.status === 429) {
-        const retryHeader = error?.response?.headers?.["retry-after"];
-        const retry = parseInt(retryHeader, 10) || 60;
-        notify.error(
-          `Too many requests — please wait ${retry} second${retry !== 1 ? "s" : ""} and try again.`,
-        );
-        startCooldown(retry);
-        return;
+    } catch (error: unknown) {
+      if (error && typeof error === "object" && "response" in error) {
+        const e = error as { response?: { status?: number; headers?: Record<string, string> } };
+        if (e?.response?.status === 429) {
+          const retryHeader = e?.response?.headers?.["retry-after"];
+          const retry = parseInt(retryHeader, 10) || 60;
+          notify.error(
+            `Too many requests — please wait ${retry} second${retry !== 1 ? "s" : ""} and try again.`,
+          );
+          startCooldown(retry);
+          return;
+        }
       }
       notify.error(
         extractErrorMessage(error) || "Failed to send verification email.",
@@ -350,8 +369,13 @@ const Profile = () => {
                   >
                     <Pencil className="h-3.5 w-3.5" /> Edit Profile
                   </Button>
-                  <Button variant="secondary" size="sm" className="gap-1.5">
-                    <Share2 className="h-3.5 w-3.5" /> Share
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => navigate("/my-posts")}
+                  >
+                    <FileText className="h-3.5 w-3.5" /> My Posts
                   </Button>
                 </div>
               </>
@@ -616,7 +640,7 @@ const Profile = () => {
 
       {/* Danger Zone */}
       <div className="mt-4 bg-card">
-        <AlertDialog>
+        <AlertDialog onOpenChange={() => setDeleteConfirmText("")}>
           <AlertDialogTrigger asChild>
             <button className="w-full flex items-center justify-between px-4 py-4 text-destructive hover:bg-muted/50 transition-colors">
               <span className="font-medium">Delete Account</span>
@@ -631,13 +655,28 @@ const Profile = () => {
                 anonymous account and remove all your data from our servers.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                Type <strong>Delete Account</strong> to confirm:
+              </p>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Delete Account"
+                className="w-full px-4 py-2.5 rounded-xl border border-input bg-background outline-none focus:ring-2 focus:ring-destructive/20 transition-all text-sm"
+              />
+            </div>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
-                onClick={handleLogout}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteConfirmText !== "Delete Account" || deleting}
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
               >
-                Delete
+                {deleting ? "Deleting..." : "Delete Account"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

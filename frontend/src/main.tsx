@@ -2,6 +2,7 @@
 import { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { DefaultError } from "@tanstack/react-query";
 import { CreatePostProvider } from "@/lib/createPostModal";
 import { notify } from "@/lib/notify";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -27,17 +28,18 @@ const VerifyEmailConfirm = lazy(() => import("@/pages/VerifyEmailConfirm"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const SavedPosts = lazy(() => import("@/pages/SavedPosts"));
 const UserProfile = lazy(() => import("@/pages/UserProfile"));
+const MyPosts = lazy(() => import("@/pages/MyPosts"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      onError: (err: any) => {
+      onError: (err: DefaultError) => {
         try {
           notify.error(err?.message || "Network error");
         } catch {}
       },
     },
-  } as any,
+  },
 });
 
 const App = () => (
@@ -70,6 +72,7 @@ const App = () => (
 
                 {/* Other */}
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/my-posts" element={<MyPosts />} />
                 <Route path="/saved-posts" element={<SavedPosts />} />
                 <Route path="/users/:userId" element={<UserProfile />} />
                 <Route path="/contact" element={<Contact />} />

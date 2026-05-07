@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
+import { extractErrorMessage } from "@/lib/errors";
 import ChatListItem from "@/components/ChatListItem";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,14 @@ export interface ChatListRow {
   updated_at: string;
 }
 
+interface ChatsPaginatedResponse {
+  data: ChatListRow[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
 const Chats = () => {
   const navigate = useNavigate();
   const [newPeerName, setNewPeerName] = useState("");
@@ -30,14 +39,14 @@ const Chats = () => {
   const CHATS_POLL_MS = 60_000;
 
   const {
-    data: chats = [],
+    data: chatsResponse,
     isLoading,
     isError,
     refetch,
   } = useQuery({
     queryKey: ["chats"],
     queryFn: async () => {
-      const { data } = await api.get<ChatListRow[]>("/api/chats");
+      const { data } = await api.get<ChatsPaginatedResponse>("/api/chats");
       return data;
     },
     refetchInterval: () =>
@@ -46,6 +55,8 @@ const Chats = () => {
         : false,
     refetchOnWindowFocus: true,
   });
+
+  const chats = chatsResponse?.data ?? [];
 
   const previewText = (chat: ChatListRow) => {
     if (chat.last_message?.body) {
@@ -79,10 +90,14 @@ const Chats = () => {
       navigate(`/chat/${data.id}`, {
         state: { peerName: data.peer?.name ?? name },
       });
-    } catch (err: any) {
-      // Check if the backend returned a 422 (Validation failed/User not found)
-      if (err.response?.status === 422) {
-        notify.error(`We couldn't find a member named "${name}".`);
+    } catch (err) {
+      if (err && typeof err === "object" && "response" in err) {
+        const e = err as { response?: { status?: number } };
+        if (e?.response?.status === 422) {
+          notify.error(`We couldn't find a member named "${name}".`);
+        } else {
+          notify.error(extractErrorMessage(err) || "Connection error. Please try again later.");
+        }
       } else {
         notify.error("Connection error. Please try again later.");
       }

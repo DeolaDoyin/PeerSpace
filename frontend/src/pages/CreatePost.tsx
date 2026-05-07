@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "@/api/axios";
 import { extractErrorMessage } from "@/lib/errors";
 import { notify } from "@/lib/notify";
+import type { Category } from "@/types";
 import { Loader2, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // ...page-level controls removed; modal contains its own header
@@ -14,11 +15,6 @@ import {
   AlertDialogDescription,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface Category {
-  id: number;
-  name: string;
-}
 
 const CreatePost = () => {
   const navigate = useNavigate();
@@ -40,9 +36,8 @@ const CreatePost = () => {
           setCategoryId(data[0].id.toString());
         }
       } catch (err) {
-        const e = err as any;
         const msg =
-          extractErrorMessage(e) ||
+          extractErrorMessage(err) ||
           "Failed to load categories. Please refresh the page.";
         try {
           notify.error(msg);
@@ -74,18 +69,17 @@ const CreatePost = () => {
       // Navigate to the post detail or back to forum
       navigate(`/posts/${data.slug}`);
     } catch (err) {
-      const e = err as any;
-      // Validation errors: show field-level messages
-      if (e?.response?.status === 422 && e.response.data?.errors) {
-        setFieldErrors(e.response.data.errors || {});
-        // also set a friendly summary message
-        const first = Object.values(e.response.data.errors)[0];
-        setError(Array.isArray(first) ? String(first[0]) : String(first));
-        return;
+      if (err && typeof err === "object" && "response" in err) {
+        const e = err as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } };
+        if (e?.response?.status === 422 && e.response.data?.errors) {
+          setFieldErrors(e.response.data.errors || {});
+          const first = Object.values(e.response.data.errors)[0];
+          setError(Array.isArray(first) ? String(first[0]) : String(first));
+          return;
+        }
       }
 
-      // Non-validation error: show a general message and notify
-      const msg = extractErrorMessage(e);
+      const msg = extractErrorMessage(err);
       setError(msg || "Failed to create post. Please try again.");
       try {
         notify.error(msg);

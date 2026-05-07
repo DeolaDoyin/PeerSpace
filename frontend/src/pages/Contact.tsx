@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { ChangeEvent, FormEvent } from "react";
 import {
   Mail,
@@ -8,11 +9,15 @@ import {
   Linkedin,
   Instagram,
   MessageSquare,
+  Loader2,
+  ArrowLeft,
 } from "lucide-react";
 
 import BottomNav from "@/components/BottomNav";
 import AppNavbar from "@/components/AppNavbar";
 import { notify } from "@/lib/notify";
+import api from "@/api/axios";
+import { extractErrorMessage } from "@/lib/errors";
 
 interface FormData {
   name: string;
@@ -22,12 +27,15 @@ interface FormData {
 }
 
 const Contact = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState<FormData>({
     name: "",
     email: "",
     subject: "",
     message: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -36,16 +44,33 @@ const Contact = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Form Submitted:", formData);
-    notify.success(`Thank you, ${formData.name}! Your message has been sent.`);
-    setFormData({ name: "", email: "", subject: "", message: "" });
+    setSubmitting(true);
+    try {
+      await api.post("/api/contact", formData);
+      notify.success(`Thank you, ${formData.name}! Your message has been sent.`);
+      setFormData({ name: "", email: "", subject: "", message: "" });
+    } catch (err) {
+      const msg = extractErrorMessage(err) || "Failed to send message. Please try again.";
+      notify.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background pb-20 transition-colors duration-300">
       <AppNavbar />
+      <div className="sticky top-16 z-10 bg-card border-b border-border px-4 py-3">
+        <button
+          onClick={() => navigate("/profile")}
+          className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Contact Us
+        </button>
+      </div>
 
       <section className="py-12 md:py-20">
         <div className="container mx-auto px-4 max-w-6xl">
@@ -196,9 +221,18 @@ const Contact = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:opacity-90 transition-all"
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-60"
                 >
-                  <Send className="w-4 h-4" /> Submit Inquiry
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" /> Submit Inquiry
+                    </>
+                  )}
                 </button>
               </form>
             </div>

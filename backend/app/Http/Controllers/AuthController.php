@@ -11,6 +11,7 @@ use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Registered;
 use App\Services\RedditAliasService;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -200,7 +201,7 @@ class AuthController extends Controller
             }
 
             Auth::login($user);
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+            $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
 
             // For newly-created social accounts, send verification email and
             // route them through the same verification flow as regular signup.
@@ -250,7 +251,7 @@ class AuthController extends Controller
             ]);
             // #endregion
             \Log::error('Socialite Error', ['exception' => $e]);
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+            $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
             return redirect()->away($frontendUrl . "/auth?error=oauth_failed");
         }
     }
@@ -259,4 +260,29 @@ class AuthController extends Controller
      * Resend email verification notification for the authenticated user.
      */
     // method moved to VerificationController
+
+    public function deleteAccount(Request $request)
+    {
+        $user = $request->user();
+
+        DB::beginTransaction();
+        try {
+            $user->savedPosts()->detach();
+            $user->hiddenPosts()->detach();
+            $user->followedPosts()->detach();
+            $user->posts()->each(fn ($post) => $post->delete());
+            $user->comments()->delete();
+            $user->chatMessages()->delete();
+            $user->notifications()->delete();
+            $user->delete();
+
+            DB::commit();
+
+            return response()->json(['message' => 'Account deleted permanently.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Account deletion failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to delete account.'], 500);
+        }
+    }
 }

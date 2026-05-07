@@ -3,9 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
+import { extractErrorMessage } from "@/lib/errors";
+import type { CommentRow, CommentNode, CommentCreatedPayload, PostCacheRow, User } from "@/types";
 import NotificationBell from "@/components/NotificationBell";
 import ThemeToggleButton from "@/components/ThemeToggle";
-import { extractErrorMessage } from "@/lib/errors";
 import { getEcho } from "@/lib/echo";
 import {
   ArrowLeft,
@@ -43,35 +44,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface CommentRow {
-  id: number;
-  content: string;
-  user_id: number;
-  parent_id?: number | null;
-  user?: { id: number; name: string };
-  created_at?: string;
-  likes_count?: number;
-  is_liked?: boolean;
-}
-
-interface CommentNode extends CommentRow {
-  replies: CommentNode[];
-}
-
-interface CommentCreatedPayload {
-  comment: {
-    id: number;
-    post_id: number;
-    parent_id?: number | null;
-    content: string;
-    created_at?: string;
-    user: { id: number; name: string };
-  };
-}
-
-interface PostCacheRow {
-  comments_count?: number;
-  [key: string]: unknown;
+export function getValidationErrors(
+  err: unknown,
+): Record<string, string[]> | null {
+  if (err && typeof err === "object" && "response" in err) {
+    const e = err as {
+      response?: {
+        status?: number;
+        data?: { errors?: Record<string, string[]> };
+      };
+    };
+    if (e?.response?.status === 422 && e.response.data?.errors) {
+      return e.response.data.errors;
+    }
+  }
+  return null;
 }
 
 const buildCommentTree = (comments: CommentRow[]): CommentNode[] => {
@@ -103,7 +90,7 @@ interface CommentItemProps {
   handleDeleteComment: (id: number) => void;
   handleStartChat: (id: number, name: string) => void;
   submitting: boolean;
-  currentUser: any;
+  currentUser: User | undefined;
   commentError: string;
   setCommentError: (s: string) => void;
 }
@@ -452,12 +439,12 @@ const PostDetail = () => {
       await queryClient.invalidateQueries({ queryKey: ["post-comments", post.id] });
       await queryClient.invalidateQueries({ queryKey: ["post", slug] });
     } catch (err) {
-      const e = err as any;
-      if (e?.response?.status === 422 && e.response.data?.errors) {
-        const first = Object.values(e.response.data.errors)[0];
+      const validation = getValidationErrors(err);
+      if (validation) {
+        const first = Object.values(validation)[0];
         setCommentError(Array.isArray(first) ? String(first[0]) : String(first));
       } else {
-        const msg = extractErrorMessage(e) || "Failed to post comment";
+        const msg = extractErrorMessage(err) || "Failed to post comment";
         setCommentError(msg);
         notify.error(msg);
       }
@@ -475,9 +462,8 @@ const PostDetail = () => {
       });
       await queryClient.invalidateQueries({ queryKey: ["post", slug] });
     } catch (err) {
-      const e = err as any;
       const msg =
-        extractErrorMessage(e) || "Failed to delete comment. Please try again.";
+        extractErrorMessage(err) || "Failed to delete comment. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -501,16 +487,14 @@ const PostDetail = () => {
       setReportData({ isOpen: false, id: 0, type: "post", reason: "" });
       notify.success("Report submitted");
     } catch (err) {
-      const e = err as any;
-      if (e?.response?.status === 422 && e.response.data?.errors) {
-        const first = Object.values(e.response.data.errors)[0];
+      const validation = getValidationErrors(err);
+      if (validation) {
+        const first = Object.values(validation)[0];
         setReportError(Array.isArray(first) ? String(first[0]) : String(first));
       } else {
-        const msg = extractErrorMessage(e) || "Failed to submit report";
+        const msg = extractErrorMessage(err) || "Failed to submit report";
         setReportError(msg);
-        try {
-          notify.error(msg);
-        } catch {}
+        try { notify.error(msg); } catch {}
       }
     } finally {
       setReportSubmitting(false);
@@ -529,9 +513,8 @@ const PostDetail = () => {
       await api.post(`/api/posts/${post?.id}/follow`);
       refetch();
     } catch (err) {
-      const e = err as any;
       const msg =
-        extractErrorMessage(e) || "Failed to follow post. Please try again.";
+        extractErrorMessage(err) || "Failed to follow post. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -543,9 +526,8 @@ const PostDetail = () => {
       await api.post(`/api/posts/${post?.id}/save`);
       refetch();
     } catch (err) {
-      const e = err as any;
       const msg =
-        extractErrorMessage(e) || "Failed to save post. Please try again.";
+        extractErrorMessage(err) || "Failed to save post. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -557,9 +539,8 @@ const PostDetail = () => {
       await api.post(`/api/posts/${post?.id}/hide`);
       navigate(-1);
     } catch (err) {
-      const e = err as any;
       const msg =
-        extractErrorMessage(e) || "Failed to hide post. Please try again.";
+        extractErrorMessage(err) || "Failed to hide post. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -571,9 +552,8 @@ const PostDetail = () => {
       await api.patch(`/api/posts/${post?.id}/pin`);
       refetch();
     } catch (err) {
-      const e = err as any;
       const msg =
-        extractErrorMessage(e) || "Failed to pin/unpin post. Please try again.";
+        extractErrorMessage(err) || "Failed to pin/unpin post. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -585,9 +565,8 @@ const PostDetail = () => {
       await api.delete(`/api/posts/${post?.id}`);
       navigate("/");
     } catch (err) {
-      const e = err as any;
       const msg =
-        extractErrorMessage(e) || "Failed to delete post. Please try again.";
+        extractErrorMessage(err) || "Failed to delete post. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -616,10 +595,8 @@ const PostDetail = () => {
       const { data } = await api.post("/api/chats", { user_id: userId });
       navigate(`/chat/${data.id}`, { state: { peerName } });
     } catch (err) {
-      const e = err as any;
-      // Starting a chat is a UX nicety; surface a friendly message
       const msg =
-        extractErrorMessage(e) || "Could not start chat. Please try again.";
+        extractErrorMessage(err) || "Could not start chat. Please try again.";
       try {
         notify.error(msg);
       } catch {}

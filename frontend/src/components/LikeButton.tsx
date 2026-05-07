@@ -38,12 +38,10 @@ const LikeButton = ({
       // 2. Sync with Laravel (e.g., POST /api/posts/5/like)
       await api.post(`/api/${type}s/${itemId}/like`);
     } catch (error) {
-      // 3. Rollback if the API fails (e.g., user is logged out)
       setIsLiked(!newIsLiked);
       setCount((prev) => (!newIsLiked ? prev + 1 : prev - 1));
-      const err = error as any;
       const msg =
-        extractErrorMessage(err) || "Failed to update like. Please try again.";
+        extractErrorMessage(error) || "Failed to update like. Please try again.";
       try {
         notify.error(msg);
       } catch {}
