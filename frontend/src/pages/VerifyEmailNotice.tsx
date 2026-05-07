@@ -47,24 +47,15 @@ export default function VerifyEmailNotice() {
   };
 
   const resend = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7692/ingest/3bec586b-ff7e-4500-8b67-d6e8fae76e58',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e43b30'},body:JSON.stringify({sessionId:'e43b30',runId:'initial',hypothesisId:'H1',location:'VerifyEmailNotice.tsx',message:'resend_clicked',data:{cooldown,submitting},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     setSubmitting(true);
     setMessage(null);
     try {
       const res = await api.post("/api/email/verification-notification");
-      // #region agent log
-      fetch('http://127.0.0.1:7692/ingest/3bec586b-ff7e-4500-8b67-d6e8fae76e58',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e43b30'},body:JSON.stringify({sessionId:'e43b30',runId:'initial',hypothesisId:'H2',location:'VerifyEmailNotice.tsx',message:'resend_api_success',data:{status:res.status},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       setMessage(
         res.data?.message || "Verification email sent. Check your inbox.",
       );
       notify.success(res.data?.message || "Verification email sent.");
     } catch (err: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7692/ingest/3bec586b-ff7e-4500-8b67-d6e8fae76e58',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e43b30'},body:JSON.stringify({sessionId:'e43b30',runId:'initial',hypothesisId:'H3',location:'VerifyEmailNotice.tsx',message:'resend_api_error',data:{status:err?.response?.status,message:err?.response?.data?.message||err?.message},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       if (err?.response?.status === 429) {
         const retryHeader = err?.response?.headers?.["retry-after"];
         const retry = parseInt(retryHeader, 10) || 60;

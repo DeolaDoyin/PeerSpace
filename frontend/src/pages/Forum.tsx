@@ -9,6 +9,7 @@ import {
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
 import { extractErrorMessage } from "@/lib/errors";
+import type { Post, PaginatedResponse, Category } from "@/types";
 import BottomNav from "@/components/BottomNav";
 import AppNavbar from "@/components/AppNavbar";
 import { Card } from "@/components/ui/card";
@@ -51,49 +52,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
-interface Post {
-  id: number;
-  slug: string;
-  title: string;
-  body: string;
-  user_id: string;
-  created_at: string;
-  comments_count: number;
-  likes_count: number;
-  is_liked?: boolean;
-  is_saved?: boolean;
-  is_hidden?: boolean;
-  is_followed?: boolean;
-  is_pinned: boolean;
-  creator?: { id: number; name: string };
-}
-
-interface PaginatedResponse {
-  data: Post[];
-  links: {
-    first: string;
-    last: string;
-    prev: string | null;
-    next: string | null;
-  };
-  meta: {
-    current_page: number;
-    from: number;
-    last_page: number;
-    per_page: number;
-    to: number;
-    total: number;
-  };
-  current_page?: number;
-  last_page?: number;
-}
-
-interface Category {
-  id: number;
-  name: string;
-  description?: string;
-}
 
 const Forum = () => {
   const queryClient = useQueryClient();
@@ -182,9 +140,8 @@ const Forum = () => {
       await api.patch(`/api/posts/${id}/pin`);
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
     } catch (e) {
-      const err = e as any;
       const msg =
-        extractErrorMessage(err) ||
+        extractErrorMessage(e) ||
         "Failed to pin/unpin post. Please try again.";
       try {
         notify.error(msg);
@@ -197,9 +154,8 @@ const Forum = () => {
       await api.delete(`/api/posts/${id}`);
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
     } catch (e) {
-      const err = e as any;
       const msg =
-        extractErrorMessage(err) || "Failed to delete post. Please try again.";
+        extractErrorMessage(e) || "Failed to delete post. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -212,9 +168,8 @@ const Forum = () => {
       const { data } = await api.post("/api/chats", { user_id: userId });
       navigate(`/chat/${data.id}`, { state: { peerName } });
     } catch (e) {
-      const err = e as any;
       const msg =
-        extractErrorMessage(err) || "Could not start chat. Please try again.";
+        extractErrorMessage(e) || "Could not start chat. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -228,9 +183,8 @@ const Forum = () => {
         res.data.message ||
           "Post reported to moderators. Thank you for keeping PeerSpace safe.",
       );
-    } catch (e: any) {
-      const err = e as any;
-      const msg = extractErrorMessage(err) || "Failed to report post.";
+    } catch (e) {
+      const msg = extractErrorMessage(e) || "Failed to report post.";
       try {
         notify.error(msg);
       } catch {}
@@ -242,9 +196,8 @@ const Forum = () => {
       await api.post(`/api/posts/${id}/save`);
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
     } catch (e) {
-      const err = e as any;
       const msg =
-        extractErrorMessage(err) || "Failed to save post. Please try again.";
+        extractErrorMessage(e) || "Failed to save post. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -256,9 +209,8 @@ const Forum = () => {
       await api.post(`/api/posts/${id}/hide`);
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
     } catch (e) {
-      const err = e as any;
       const msg =
-        extractErrorMessage(err) || "Failed to hide post. Please try again.";
+        extractErrorMessage(e) || "Failed to hide post. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -270,9 +222,8 @@ const Forum = () => {
       await api.post(`/api/posts/${id}/follow`);
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
     } catch (e) {
-      const err = e as any;
       const msg =
-        extractErrorMessage(err) || "Failed to follow post. Please try again.";
+        extractErrorMessage(e) || "Failed to follow post. Please try again.";
       try {
         notify.error(msg);
       } catch {}

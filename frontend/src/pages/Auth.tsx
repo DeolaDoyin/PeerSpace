@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
+import { extractErrorMessage } from "@/lib/errors";
 import FloatingInput from "@/components/FloatingInput";
 import ThemeToggleButton from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -29,8 +30,7 @@ const Auth = () => {
       const { data } = await api.get("/api/auth/suggest-username");
       setUsername(data);
     } catch (e) {
-      const err = e as any;
-      const msg = err?.message || "Failed to fetch username suggestion";
+      const msg = extractErrorMessage(e) || "Failed to fetch username suggestion";
       try {
         notify.error(msg);
       } catch {}

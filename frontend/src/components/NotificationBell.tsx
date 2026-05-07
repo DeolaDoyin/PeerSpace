@@ -10,6 +10,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/api/axios";
 import { useNavigate } from "react-router-dom";
+import type { DbNotification } from "@/types";
 import {
   Sheet,
   SheetContent,
@@ -23,15 +24,12 @@ import { useState, useEffect } from "react";
 import { getEcho } from "@/lib/echo";
 import { notify } from "@/lib/notify";
 
-interface DbNotification {
-  id: string;
-  type?: string;
-  created_at: string;
-  data: {
-    type?: string;
-    message?: string;
-    post_slug?: string;
-  };
+interface NotificationsPaginatedResponse {
+  data: DbNotification[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
 }
 
 const POLL_MS = 45_000;
@@ -50,13 +48,13 @@ const NotificationBell = () => {
   });
 
   const {
-    data: notifications,
+    data: notificationsResponse,
     isLoading,
     refetch,
   } = useQuery({
     queryKey: ["notifications"],
     queryFn: async () => {
-      const { data } = await api.get<DbNotification[]>("/api/notifications");
+      const { data } = await api.get<NotificationsPaginatedResponse>("/api/notifications");
       return data;
     },
     refetchInterval: () =>
@@ -65,6 +63,8 @@ const NotificationBell = () => {
         : false,
     refetchOnWindowFocus: true,
   });
+
+  const notifications = notificationsResponse?.data ?? [];
 
   useEffect(() => {
     if (!user?.id) return;
@@ -104,9 +104,8 @@ const NotificationBell = () => {
         navigate(`/posts/${notifData.post_slug}`);
       }
     } catch (err) {
-      const e = err as any;
       const msg =
-        e?.message || "Failed to mark notification read. Please try again.";
+        err instanceof Error ? err.message : "Failed to mark notification read. Please try again.";
       try {
         notify.error(msg);
       } catch {}
@@ -118,9 +117,8 @@ const NotificationBell = () => {
       await api.post("/api/notifications/mark-all-read");
       await queryClient.invalidateQueries({ queryKey: ["notifications"] });
     } catch (err) {
-      const e = err as any;
       const msg =
-        e?.message || "Failed to mark notifications. Please try again.";
+        err instanceof Error ? err.message : "Failed to mark notifications. Please try again.";
       try {
         notify.error(msg);
       } catch {}

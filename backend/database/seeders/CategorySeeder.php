@@ -20,7 +20,7 @@ class CategorySeeder extends Seeder
             ['name' => 'Depression', 'description' => 'A safe space for those feeling down.'],
             ['name' => 'Loneliness', 'description' => 'A place for those feeling alone.'],
             ['name' => 'Relationships', 'description' => 'Discuss friendships, family, and more.'],
-            ['name' => 'Emergency Resources', 'description' => 'Important links and hotlines.'],
+            // ['name' => 'Emergency Resources', 'description' => 'Important links and hotlines.'],
             ['name' => 'Others', 'description' => 'For topics that don\'t fit elsewhere.'],
         ];
 

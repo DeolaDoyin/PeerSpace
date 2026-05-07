@@ -13,6 +13,7 @@ import ThemeToggleButton from "@/components/ThemeToggle";
 import ChatInput from "@/components/ChatInput";
 import AnonAvatar from "@/components/AnonAvatar";
 import type { ChatListRow } from "@/pages/Chats";
+import type { ChatMessageApi, MessageSentPayload } from "@/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,32 +33,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-interface ChatMessageApi {
-  id: number;
-  chat_id: number;
-  user_id: number;
-  body: string;
-  created_at: string;
-  sender?: { id: number; name: string } | null;
-}
-
 interface MessagesPage {
   data: ChatMessageApi[];
   total: number;
   current_page: number;
   last_page: number;
   per_page: number;
-}
-
-interface MessageSentPayload {
-  message: {
-    id: number;
-    chat_id: number;
-    user_id: number;
-    body: string;
-    created_at?: string;
-    sender: { id: number; name: string } | null;
-  };
 }
 
 interface UiMessage {
@@ -214,9 +195,9 @@ const ChatRoom = () => {
         res.data.message ||
           "User reported. Thank you for keeping PeerSpace safe.",
       );
-    } catch (e: any) {
+    } catch (e) {
       console.error("Failed to report user", e);
-      notify.error(e.response?.data?.message || "Failed to send report.");
+      notify.error(e instanceof Error ? e.message : "Failed to send report.");
     }
   };
 

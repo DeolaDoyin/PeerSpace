@@ -13,14 +13,15 @@ use App\Notifications\ContentReported;
 
 class ReportController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Only return pending reports with relations loaded
+        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
+
         $reports = Report::with(['user', 'reportable'])
             ->where('status', 'pending')
             ->latest()
-            ->get();
-            
+            ->paginate($perPage);
+
         return response()->json($reports);
     }
 
@@ -36,6 +37,17 @@ class ReportController extends Controller
         // Ensure target exists
         if (!$typeClass::find($validated['reportable_id'])) {
             return response()->json(['error' => 'Target not found'], 404);
+        }
+
+        // Prevent duplicate reports from the same user
+        $existing = Report::where('user_id', $request->user()->id)
+            ->where('reportable_id', $validated['reportable_id'])
+            ->where('reportable_type', $typeClass)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($existing) {
+            return response()->json(['error' => 'You have already reported this content.'], 422);
         }
 
         $report = Report::create([

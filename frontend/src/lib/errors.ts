@@ -1,14 +1,13 @@
 import type { AxiosError } from "axios";
+import type { ApiValidationErrors } from "@/types";
 
 export function extractErrorMessage(err: unknown): string {
-  const e = err as AxiosError & { response?: { data?: any } };
-  // Validation errors from Laravel: response.data.errors (object) or message
+  const e = err as AxiosError<ApiValidationErrors | { message?: string } | string>;
   if (e?.response?.data) {
     const d = e.response.data;
     if (typeof d === "string") return d;
     if (d.message) return String(d.message);
-    if (d.errors) {
-      // Flatten validation messages to a single string
+    if ("errors" in d && d.errors) {
       try {
         const msgs = Object.values(d.errors).flat();
         return Array.isArray(msgs) ? msgs.join(" ") : String(msgs);

@@ -15,6 +15,7 @@ use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Services\RedditAliasService;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\ContactController;
 
 Route::middleware(['throttle:auth'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -34,6 +35,8 @@ Route::get('/auth/suggest-username', function () {
 Route::get('/auth/{provider}/redirect', [AuthController::class, 'redirectToProvider']);
 Route::get('/auth/{provider}/callback', [AuthController::class, 'handleProviderCallback']);
 
+Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:post-write');
+
 // Protected routes
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -42,6 +45,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
     Route::get('/users/{user}/profile', [UserProfileController::class, 'show']);
     Route::put('/user', [AuthController::class, 'updateProfile']);
+    Route::delete('/user', [AuthController::class, 'deleteAccount']);
 
     // Change password for the authenticated user (frontend posts to /api/user/password)
     Route::patch('/user/password', [PasswordController::class, 'update'])
@@ -75,8 +79,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/categories/{category}/posts', [PostController::class, 'index']);
 
     // Notifications
-    Route::get('/notifications', function () {
-        return auth()->user()->unreadNotifications;
+    Route::get('/notifications', function (Request $request) {
+        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
+        return auth()->user()->unreadNotifications()->paginate($perPage);
     });
     
     Route::post('/notifications/{id}/read', function ($id) {
@@ -122,11 +127,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Moderator routes
     Route::middleware(['moderator'])->group(function () {
         Route::patch('/posts/{post}/pin', [PostController::class, 'togglePin']);
-        Route::delete('/posts/{post}', [PostController::class, 'destroy']);
         Route::post('/users/suspend', [ModerationController::class, 'suspendUser']);
         Route::get('/reports', [ReportController::class, 'index']);
         Route::patch('/reports/{report}/resolve', [ReportController::class, 'resolve']);
     });
+
+    // Delete owned posts (policy checks ownership or staff role)
+    Route::delete('/posts/{post}', [PostController::class, 'destroy']);
 
     Route::prefix('users/{user}')->group(function () {
         // Change password - PATCH /settings/users/1/password

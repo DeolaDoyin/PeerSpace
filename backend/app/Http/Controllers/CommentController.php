@@ -18,15 +18,11 @@ class CommentController extends Controller
 
     public function index(Request $request, Post $post)
     {
-        $query = $post->comments()->with('user')->orderBy('created_at', 'asc');
+        $perPage = $request->filled('per_page')
+            ? min(100, max(1, (int) $request->query('per_page')))
+            : 50;
 
-        if ($request->filled('per_page')) {
-            $perPage = min(100, max(1, (int) $request->query('per_page')));
-
-            return $query->paginate($perPage);
-        }
-
-        return $query->get();
+        return $post->comments()->with('user')->orderBy('created_at', 'asc')->paginate($perPage);
     }
 
     public function store(Request $request, Post $post)
