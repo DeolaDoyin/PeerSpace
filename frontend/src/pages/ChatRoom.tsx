@@ -109,6 +109,7 @@ const ChatRoom = () => {
     ?.peerName;
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const [sending, setSending] = useState(false);
 
   const { data: user } = useQuery({
@@ -164,6 +165,12 @@ const ChatRoom = () => {
       document.body.style.overflow = "auto";
     };
   }, []); // Empty dependency array means this only runs on mount/unmount
+
+  useEffect(() => {
+  if (!sending && !isLoading) {
+    inputRef.current?.focus();
+  }
+}, [sending, isLoading]);
 
   // Auto-scroll effect
   useEffect(() => {
@@ -309,7 +316,7 @@ const ChatRoom = () => {
                   type="button"
                   className="p-2 hover:bg-muted rounded-full transition-colors focus:outline-none"
                 >
-                  <MoreVertical className="text-primary h-5 w-5 text-muted-foreground" />
+                  <MoreVertical className="text-primary h-5 w-5" />
                 </button>
               </DropdownMenuTrigger>
 
@@ -441,7 +448,7 @@ const ChatRoom = () => {
 
       {/* Input bar stays fixed at the bottom */}
       <footer className="flex-none bg-card border-t border-border">
-        <ChatInput onSend={handleSend} disabled={sending || isLoading} />
+        <ChatInput ref={inputRef} onSend={handleSend} disabled={sending || isLoading} />
       </footer>
     </div>
   );
