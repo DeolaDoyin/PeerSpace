@@ -15,20 +15,26 @@ class PasswordResetController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::broker()->sendResetLink(
-            $request->only('email')
-        );
+        try {
+            $status = Password::broker()->sendResetLink(
+                $request->only('email')
+            );
 
-        if ($status == Password::RESET_LINK_SENT) {
-            return response()->json(['message' => __($status)]);
+            if ($status == Password::RESET_LINK_SENT) {
+                return response()->json(['message' => __($status)]);
+            }
+
+            throw ValidationException::withMessages([
+                'email' => [__($status)],
+            ]);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            report($e);
+            throw ValidationException::withMessages([
+                'email' => ['Unable to send reset email. Please try again later.'],
+            ]);
         }
-
-        throw ValidationException::withMessages([
-            'email' => [__($status)],
-        ]);
     }
 
     /**
@@ -42,24 +48,30 @@ class PasswordResetController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
-        $status = Password::broker()->reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
-                $user->forceFill([
-                    'password' => \Illuminate\Support\Facades\Hash::make($password),
-                ])->save();
+        try {
+            $status = Password::broker()->reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function ($user, $password) {
+                    $user->forceFill([
+                        'password' => \Illuminate\Support\Facades\Hash::make($password),
+                    ])->save();
+                }
+            );
+
+            if ($status == Password::PASSWORD_RESET) {
+                return response()->json(['message' => __($status)]);
             }
-        );
 
-        if ($status == Password::PASSWORD_RESET) {
-            return response()->json(['message' => __($status)]);
+            throw ValidationException::withMessages([
+                'email' => [__($status)],
+            ]);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            report($e);
+            throw ValidationException::withMessages([
+                'email' => ['Unable to reset password. Please try again later.'],
+            ]);
         }
-
-        throw ValidationException::withMessages([
-            'email' => [__($status)],
-        ]);
     }
 }

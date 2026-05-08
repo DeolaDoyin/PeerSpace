@@ -95,6 +95,7 @@ class AuthController extends Controller
             $request->validate([
                 'login' => 'required|string',
                 'password' => 'required|string',
+                'remember' => 'boolean',
             ]);
 
             $loginValue = $request->input('login');
@@ -110,7 +111,7 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Your account has been suspended.'], 403);
             }
 
-            Auth::login($user);
+            Auth::login($user, $request->boolean('remember'));
 
             return response()->json([
                 'user' => $user,
