@@ -21,7 +21,7 @@ export default function ForgotPasswordModal({
 
   useEffect(() => {
       // Just a simple GET to wake the server up while the user is typing their email
-      fetch('https://peerspace-aiyh.onrender.com/api/health')
+      api.get('/api/health')
           .catch(() => console.log("Waking up server..."));
   }, []);
 
