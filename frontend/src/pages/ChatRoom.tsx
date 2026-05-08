@@ -112,11 +112,20 @@ const ChatRoom = () => {
   enabled: Boolean(user?.id && Number.isFinite(chatIdNum)),
 });
 
-  const peerName =
+  // Use useMemo to prevent unnecessary recalculations
+const peerName = useMemo(() => {
+  return (
     peerNameFromNav ??
-    chatRows?.find((c: ChatListRow) => c.id === chatIdNum)?.peer?.name ??
-    "Peer";
-  const peerId = chatRows?.find((c: ChatListRow) => c.id === chatIdNum)?.peer?.id;
+    (Array.isArray(chatRows) 
+      ? chatRows.find((c: ChatListRow) => c.id === chatIdNum)?.peer?.name 
+      : null) ??
+    "Peer"
+  );
+}, [peerNameFromNav, chatRows, chatIdNum]);
+
+const peerId = Array.isArray(chatRows) 
+  ? chatRows.find((c: ChatListRow) => c.id === chatIdNum)?.peer?.id 
+  : undefined;
 
   const {
     data: messagesPage,
