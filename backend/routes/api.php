@@ -112,11 +112,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Notifications
     Route::get('/notifications', function (Request $request) {
         $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
-        return auth()->user->unreadNotifications()->paginate($perPage);
+        return auth()->user()->unreadNotifications()->paginate($perPage);
     });
     
     Route::post('/notifications/{id}/read', function ($id) {
-        $notification = auth()->user->notifications()->find($id);
+        $notification = auth()->user()->notifications()->find($id);
         if ($notification) {
             $notification->markAsRead();
         }
@@ -124,7 +124,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::post('/notifications/mark-all-read', function () {
-        auth()->user->unreadNotifications->markAsRead();
+        auth()->user()->unreadNotifications->markAsRead();
         return response()->json(['success' => true]);
     });
 
