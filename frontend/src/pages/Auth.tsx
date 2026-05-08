@@ -23,6 +23,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingAlias, setIsLoadingAlias] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   const fetchSuggestion = async () => {
     setIsLoadingAlias(true);
@@ -78,7 +79,7 @@ const Auth = () => {
     try {
       const endpoint = isLogin ? "/api/login" : "/api/register";
       const payload = isLogin
-        ? { login: username, password }
+        ? { login: username, password, remember }
         : {
             name: username,
             email,
@@ -259,6 +260,18 @@ const Auth = () => {
                 </div>
               )}
             </div>
+
+            {isLogin && (
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-muted-foreground">Remember me</span>
+              </label>
+            )}
 
             {!isLogin && (
               <FloatingInput

@@ -15,7 +15,8 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.26",
         "laravel/tinker": "^2.10.1",
-        "pusher/pusher-php-server": "*"
+        "pusher/pusher-php-server": "*",
+        "resend/resend-laravel": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
