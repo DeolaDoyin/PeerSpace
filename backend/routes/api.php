@@ -17,6 +17,10 @@ use App\Services\RedditAliasService;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ContactController;
 
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok'], 200);
+});
+
 Route::middleware(['throttle:auth'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
