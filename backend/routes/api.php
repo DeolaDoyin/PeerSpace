@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CategoryController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\UserProfileController;
 use App\Services\RedditAliasService;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ContactController;
+
 
 Route::get('/test-mail-now', function () {
     try {
@@ -110,11 +112,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Notifications
     Route::get('/notifications', function (Request $request) {
         $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
-        return auth()->user()->unreadNotifications()->paginate($perPage);
+        return auth()->user->unreadNotifications()->paginate($perPage);
     });
     
     Route::post('/notifications/{id}/read', function ($id) {
-        $notification = auth()->user()->notifications()->find($id);
+        $notification = auth()->user->notifications()->find($id);
         if ($notification) {
             $notification->markAsRead();
         }
@@ -122,7 +124,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     Route::post('/notifications/mark-all-read', function () {
-        auth()->user()->unreadNotifications->markAsRead();
+        auth()->user->unreadNotifications->markAsRead();
         return response()->json(['success' => true]);
     });
 

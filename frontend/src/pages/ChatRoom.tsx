@@ -90,7 +90,7 @@ const ChatRoom = () => {
     ?.peerName;
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
 
   const { data: user } = useQuery({
@@ -102,19 +102,21 @@ const ChatRoom = () => {
   });
 
   const { data: chatRows } = useQuery({
-    queryKey: ["chats"],
-    queryFn: async () => {
-      const { data } = await api.get<ChatListRow[]>("/api/chats");
-      return data;
-    },
-    enabled: Boolean(user?.id && Number.isFinite(chatIdNum)),
-  });
+  queryKey: ["chats"],
+  queryFn: async () => {
+    const { data } = await api.get("/api/chats");
+    // If Laravel returns pagination, the array is in data.data
+    // If it returns a simple array, it's just data.
+    return Array.isArray(data) ? data : (data.data || []); 
+  },
+  enabled: Boolean(user?.id && Number.isFinite(chatIdNum)),
+});
 
   const peerName =
     peerNameFromNav ??
-    chatRows?.find((c) => c.id === chatIdNum)?.peer?.name ??
+    chatRows?.find((c: ChatListRow) => c.id === chatIdNum)?.peer?.name ??
     "Peer";
-  const peerId = chatRows?.find((c) => c.id === chatIdNum)?.peer?.id;
+  const peerId = chatRows?.find((c: ChatListRow) => c.id === chatIdNum)?.peer?.id;
 
   const {
     data: messagesPage,
