@@ -21,6 +21,17 @@ Route::get('/health', function () {
     return response()->json(['status' => 'ok'], 200);
 });
 
+Route::get('/process-queue-secret-789', function (Request $request) {
+    // SECURITY CHECK: Ensure the 'key' in the URL matches your secret
+    if ($request->query('key') !== env('CRON_SECRET')) {
+        abort(403, 'Unauthorized access.');
+    }
+
+    // This clears the emails waiting in the database
+    Artisan::call('queue:work --stop-when-empty');
+    
+    return response()->json(['message' => 'Queue processed successfully.']);
+});
 Route::middleware(['throttle:auth'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
