@@ -46,7 +46,7 @@ Route::get('/process-queue-secret-789', function (Request $request) {
     
     return response()->json(['message' => 'Queue processed successfully.']);
 });
-Route::middleware(['throttle:auth'])->group(function () {
+Route::middleware(['web', 'throttle:auth'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])->middleware('guest')->name('password.email');
