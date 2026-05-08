@@ -2,6 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CategoryController;
@@ -16,6 +18,18 @@ use App\Http\Controllers\UserProfileController;
 use App\Services\RedditAliasService;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ContactController;
+
+Route::get('/test-mail-now', function () {
+    try {
+        Mail::raw('Testing PeerSpace Email', function ($message) {
+            $message->to('your-personal-email@gmail.com')->subject('Manual Test');
+        });
+        return "Mail sent attempt finished. Check Render Logs!";
+    } catch (\Exception $e) {
+        Log::error("Mail Failure: " . $e->getMessage());
+        return "Error: " . $e->getMessage();
+    }
+});
 
 Route::get('/health', function () {
     return response()->json(['status' => 'ok'], 200);
