@@ -105,7 +105,7 @@ class CommentApiTest extends TestCase
         Sanctum::actingAs($user);
 
         $plain = $this->getJson("/api/posts/{$post->id}/comments")->assertOk();
-        $plain->assertJsonCount(3);
+        $plain->assertJsonCount(3, 'data');
 
         $paged = $this->getJson("/api/posts/{$post->id}/comments?per_page=2")->assertOk();
         $paged->assertJsonPath('total', 3);

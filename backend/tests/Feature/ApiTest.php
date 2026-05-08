@@ -54,7 +54,7 @@ class ApiTest extends TestCase
         $commentsResponse = $this->getJson("/api/posts/{$postId}/comments");
         
         $commentsResponse->assertOk();
-        $commentsResponse->assertJsonCount(1);
+        $commentsResponse->assertJsonCount(1, 'data');
         $commentsResponse->assertJsonFragment(['content' => 'This is a test comment.']);
     }
 }
