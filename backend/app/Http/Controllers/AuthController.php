@@ -113,6 +113,8 @@ class AuthController extends Controller
 
             Auth::login($user, $request->boolean('remember'));
 
+            $request->session()->regenerate();
+
             return response()->json([
                 'user' => $user,
             ]);

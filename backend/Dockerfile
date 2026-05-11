@@ -33,6 +33,10 @@ RUN chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
+# Ensure config is fresh and cached for production
+RUN php artisan config:cache
+RUN php artisan route:cache
+
 # Setup Nginx config (Render specific)
 COPY .render/nginx.conf /etc/nginx/sites-available/default
 

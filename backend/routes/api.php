@@ -2,6 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CategoryController;
@@ -17,7 +20,35 @@ use App\Services\RedditAliasService;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ContactController;
 
-Route::middleware(['throttle:auth'])->group(function () {
+
+Route::get('/test-mail-now', function () {
+    try {
+        Mail::raw('Testing PeerSpace Email', function ($message) {
+            $message->to('your-personal-email@gmail.com')->subject('Manual Test');
+        });
+        return "Mail sent attempt finished. Check Render Logs!";
+    } catch (\Exception $e) {
+        Log::error("Mail Failure: " . $e->getMessage());
+        return "Error: " . $e->getMessage();
+    }
+});
+
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok'], 200);
+});
+
+Route::get('/process-queue-secret-789', function (Request $request) {
+    // SECURITY CHECK: Ensure the 'key' in the URL matches your secret
+    if ($request->query('key') !== env('CRON_SECRET')) {
+        abort(403, 'Unauthorized access.');
+    }
+
+    // This clears the emails waiting in the database
+    Artisan::call('queue:work --stop-when-empty');
+    
+    return response()->json(['message' => 'Queue processed successfully.']);
+});
+Route::middleware(['web', 'throttle:auth'])->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])->middleware('guest')->name('password.email');

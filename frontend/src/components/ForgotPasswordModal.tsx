@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
 import api from "@/api/axios";
@@ -18,6 +18,12 @@ export default function ForgotPasswordModal({
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+      // Just a simple GET to wake the server up while the user is typing their email
+      api.get('/api/health')
+          .catch(() => console.log("Waking up server..."));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
