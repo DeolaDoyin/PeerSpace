@@ -36,7 +36,7 @@ class ResendVerificationTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson(['message' => 'Verification email sent.']);
 
-        Notification::assertSentTo($user, VerifyEmail::class);
+        Notification::assertSentTo($user->fresh(), VerifyEmail::class);
     }
 
     public function test_throttle_limits_resend_requests()

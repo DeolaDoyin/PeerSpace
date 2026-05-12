@@ -113,10 +113,12 @@ class AuthController extends Controller
 
             Auth::login($user, $request->boolean('remember'));
 
+            $token = $user->createToken('auth_token')->plainTextToken;
             $request->session()->regenerate();
 
             return response()->json([
                 'user' => $user,
+                'token' => $token,
             ]);
 
         } catch (\Exception $e) {
