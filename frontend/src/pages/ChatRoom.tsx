@@ -91,7 +91,7 @@ const ChatRoom = () => {
     ?.peerName;
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
 
   const { data: user } = useQuery({
@@ -113,7 +113,9 @@ const ChatRoom = () => {
 
   const chatRows = chatsResponse?.data ?? [];
 
-  const peerName =
+  // Use useMemo to prevent unnecessary recalculations
+const peerName = useMemo(() => {
+  return (
     peerNameFromNav ??
     chatRows.find((c) => c.id === chatIdNum)?.peer?.name ??
     "Peer";
