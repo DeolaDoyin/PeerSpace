@@ -5,8 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Category;
 use App\Models\Report;
-use Illuminate\Http\Request;
+use App\Models\User;
+use App\Services\CrisisKeywordService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\ContentReported;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class PostController extends Controller
@@ -78,8 +82,60 @@ class PostController extends Controller
 
         $post = auth()->user()->posts()->create($data);
 
+        // Auto-flag content from new accounts (less than 24 hours old)
+        $user = auth()->user();
+        $isNewAccount = $user->created_at && $user->created_at->diffInHours(now()) < 24;
+        if ($isNewAccount) {
+            $existingReport = Report::where('reportable_id', $post->id)
+                ->where('reportable_type', Post::class)
+                ->where('status', 'pending')
+                ->exists();
+
+            if (!$existingReport) {
+                Report::create([
+                    'user_id' => $user->id,
+                    'reportable_id' => $post->id,
+                    'reportable_type' => Post::class,
+                    'status' => 'pending',
+                ]);
+
+                $moderators = User::whereIn('role', ['admin', 'moderator'])->get();
+                Notification::send($moderators, new ContentReported('post', $post->id, $user));
+            }
+        }
+
+        // Check for crisis keywords and auto-report if detected
+        $checkContent = ($validated['title'] ?? '') . ' ' . ($data['body'] ?? '');
+        $crisisCheck = CrisisKeywordService::check($checkContent);
+        if ($crisisCheck['matched'] && $crisisCheck['severity'] !== 'low') {
+            $existingReport = Report::where('reportable_id', $post->id)
+                ->where('reportable_type', Post::class)
+                ->where('status', 'pending')
+                ->exists();
+
+            if (!$existingReport) {
+                Report::create([
+                    'user_id' => auth()->id(),
+                    'reportable_id' => $post->id,
+                    'reportable_type' => Post::class,
+                    'status' => 'pending',
+                ]);
+
+                $moderators = User::whereIn('role', ['admin', 'moderator'])->get();
+                Notification::send($moderators, new ContentReported('post', $post->id, auth()->user()));
+            }
+        }
+
         // Load relations so the React frontend can display them immediately
-        return response()->json($post->load('creator', 'category'), 201);
+        $response = response()->json($post->load('creator', 'category'), 201);
+
+        // If crisis keywords detected, include helpline info in response headers
+        if ($crisisCheck['matched'] && $crisisCheck['severity'] !== 'low') {
+            $response->header('X-Crisis-Detected', 'true');
+            $response->header('X-Crisis-Helplines', json_encode(CrisisKeywordService::getHelplines()));
+        }
+
+        return $response;
     }
 
     public function update(Request $request, Post $post): JsonResponse

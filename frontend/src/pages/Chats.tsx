@@ -53,7 +53,6 @@ const Chats = () => {
       typeof document !== "undefined" && document.visibilityState === "visible"
         ? CHATS_POLL_MS
         : false,
-    refetchOnWindowFocus: true,
   });
 
   const chats = chatsResponse?.data ?? [];

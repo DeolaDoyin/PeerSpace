@@ -16,14 +16,15 @@ class AuthTest extends TestCase
     {
         $response = $this->postJson('/api/register', [
             'name' => 'testuser',
-            'email' => 'test@example.com',
+            'email' => 'test@university.edu',
+            'university' => 'Test University',
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ]);
 
         $response->assertStatus(201);
         $response->assertJsonStructure(['user', 'message']);
-        $this->assertDatabaseHas('users', ['email' => 'test@example.com', 'name' => 'testuser']);
+        $this->assertDatabaseHas('users', ['email' => 'test@university.edu', 'name' => 'testuser']);
     }
 
     public function test_register_validates_required_fields(): void

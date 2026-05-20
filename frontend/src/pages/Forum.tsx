@@ -26,6 +26,9 @@ import {
   Bookmark,
   EyeOff,
   Bell,
+  Search,
+  Pencil,
+  Heart,
 } from "lucide-react";
 // import {
 //   Sheet,
@@ -59,6 +62,9 @@ const Forum = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | number>(
     "All",
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [crisisHelplines, setCrisisHelplines] = useState<Array<{name: string; number: string; available: string}>>([]);
+  const [showCrisisModal, setShowCrisisModal] = useState(false);
 
   // Fetch Current User for Roles
   const { data: user } = useQuery({
@@ -113,7 +119,6 @@ const Forum = () => {
       typeof document !== "undefined" && document.visibilityState === "visible"
         ? FORUM_POLL_MS
         : false,
-    refetchOnWindowFocus: true,
   });
 
   // Listen for global refresh events (dispatched by the navbar)
@@ -230,10 +235,31 @@ const Forum = () => {
     }
   };
 
+  const allPosts = data?.pages.flatMap((page: PaginatedResponse) => page.data) ?? [];
+  const filteredPosts = searchQuery.trim()
+    ? allPosts.filter((post: Post) =>
+        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.body?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : allPosts;
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Navbar */}
-      <AppNavbar />
+      <AppNavbar
+        centerSlot={
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search posts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm bg-muted border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            />
+          </div>
+        }
+      />
 
       {/* Category Pills (mobile) */}
       <div className="px-4 py-3 border-b border-border bg-card overflow-x-auto whitespace-nowrap hide-scrollbar md:hidden">
@@ -269,7 +295,7 @@ const Forum = () => {
         <div className="md:flex md:gap-6">
           {/* Sidebar for md+ */}
           <aside className="hidden md:block w-64 shrink-0">
-            <div className="bg-card border border-border rounded-lg p-3 space-y-3">
+            <div className="sticky top-16 bg-card border border-border rounded-lg p-3 space-y-3">
               <h4 className="text-sm font-semibold text-foreground">
                 Categories
               </h4>
@@ -335,12 +361,18 @@ const Forum = () => {
             )}
 
             {/* Success State - Flattening the pages array */}
-            {data?.pages.map((page: PaginatedResponse, i: number) => (
-              <React.Fragment key={i}>
-                {page.data.map((post: Post) => {
+            {filteredPosts.map((post: Post) => {
                   const peerId = post.creator?.id;
 
-                  return (
+  const allPosts = data?.pages.flatMap((page: PaginatedResponse) => page.data) ?? [];
+  const filteredPosts = searchQuery.trim()
+    ? allPosts.filter((post: Post) =>
+        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.body?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : allPosts;
+
+  return (
                   <Card
                     key={post.id}
                     className="p-4 hover:shadow-md transition-shadow border-border"
@@ -442,7 +474,8 @@ const Forum = () => {
                               <span>Hide</span>
                             </DropdownMenuItem>
                             {user?.role !== "admin" &&
-                              user?.role !== "moderator" && (
+                              user?.role !== "moderator" &&
+                              user?.id !== post.creator?.id && (
                                 <>
                                   <DropdownMenuSeparator />
 
@@ -502,6 +535,14 @@ const Forum = () => {
                               user?.role === "moderator" ||
                               user?.id === post.creator?.id) && (
                               <>
+                                {user?.id === post.creator?.id && (
+                                  <DropdownMenuItem
+                                    onClick={() => navigate(`/posts/${post.slug}/edit`)}
+                                  >
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                )}
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <DropdownMenuItem
@@ -543,9 +584,8 @@ const Forum = () => {
                       </div>
                     </div>
                   </Card>
-                )})}
-              </React.Fragment>
-            ))}
+                );
+              })}
 
             {/* Load More Trigger */}
             <div className="pt-4 flex justify-center">
@@ -585,6 +625,36 @@ const Forum = () => {
       </Link>
 
       <BottomNav />
+
+      {/* Crisis Helpline Modal */}
+      <AlertDialog open={showCrisisModal} onOpenChange={setShowCrisisModal}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Heart className="h-5 w-5" />
+              We're Here For You
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              It looks like you might be going through a difficult time. You're not alone. 
+              Please reach out to one of these helplines for support:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 my-4">
+            {crisisHelplines.map((helpline, i) => (
+              <div key={i} className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-foreground">{helpline.name}</p>
+                <p className="text-lg font-bold text-primary">{helpline.number}</p>
+                <p className="text-xs text-muted-foreground">{helpline.available}</p>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowCrisisModal(false)}>
+              I Understand
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

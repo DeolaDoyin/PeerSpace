@@ -61,7 +61,6 @@ const NotificationBell = () => {
       typeof document !== "undefined" && document.visibilityState === "visible"
         ? POLL_MS
         : false,
-    refetchOnWindowFocus: true,
   });
 
   const notifications = notificationsResponse?.data ?? [];
@@ -86,7 +85,7 @@ const NotificationBell = () => {
     };
   }, [user?.id, queryClient, isOpen]);
 
-  const unreadCount = notifications?.length || 0;
+  const unreadCount = Math.min(notifications?.length || 0, 99);
 
   const handleRead = async (id: string, notifData: any) => {
     try {
@@ -97,6 +96,11 @@ const NotificationBell = () => {
 
       if (notifData?.type === "content_deleted") {
         notify.info("This content has been removed.");
+        return;
+      }
+
+      if (notifData?.type === "content_reported") {
+        navigate("/reports");
         return;
       }
 

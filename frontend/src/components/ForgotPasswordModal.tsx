@@ -19,12 +19,6 @@ export default function ForgotPasswordModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  useEffect(() => {
-      // Just a simple GET to wake the server up while the user is typing their email
-      fetch('https://peerspace-aiyh.onrender.com/api/user')
-          .catch(() => console.log("Waking up server..."));
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !email.includes("@")) {
