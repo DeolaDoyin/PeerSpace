@@ -51,10 +51,14 @@ class ApiTest extends TestCase
         $commentResponse->assertStatus(200);
 
         // 5. List Comments
+        // 5. List Comments
         $commentsResponse = $this->getJson("/api/posts/{$postId}/comments");
-        
+
         $commentsResponse->assertOk();
-        $commentsResponse->assertJsonCount(1, 'data');
+
+        // Access the 'data' key specifically to count the actual comments
+        $commentsResponse->assertJsonCount(1, 'data'); 
+
         $commentsResponse->assertJsonFragment(['content' => 'This is a test comment.']);
     }
 }

@@ -23,6 +23,7 @@ class ChatApiTest extends TestCase
         $first->assertCreated();
         $first->assertJsonPath('type', 'direct');
         $first->assertJsonPath('peer.id', $b->id);
+        
         $chatId = $first->json('id');
         $this->assertIsInt($chatId);
 
@@ -34,6 +35,7 @@ class ChatApiTest extends TestCase
     public function test_store_rejects_self_and_invalid_user(): void
     {
         $a = User::factory()->create();
+        $invalidUsername = 'nonexistent_user_123';
         Sanctum::actingAs($a);
 
         $this->postJson('/api/chats', ['username' => $a->name])->assertStatus(422);
