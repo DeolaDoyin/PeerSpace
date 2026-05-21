@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2, MoreVertical, Flag, User, ShieldOff } from "lucide-
 import api from "@/api/axios";
 // use the project's notify wrapper for consistent toasts
 import { getEcho } from "@/lib/echo";
+import { enqueueMessage, setupAutoFlush } from "@/lib/messageQueue";
 import notify from "@/lib/notify";
 import { toast } from "@/components/ui/toast";
 import MessageBubble from "@/components/MessageBubble";
@@ -101,31 +102,24 @@ const ChatRoom = () => {
     },
   });
 
-  const { data: chatRows } = useQuery({
-  queryKey: ["chats"],
-  queryFn: async () => {
-    const { data } = await api.get("/api/chats");
-    // If Laravel returns pagination, the array is in data.data
-    // If it returns a simple array, it's just data.
-    return Array.isArray(data) ? data : (data.data || []); 
-  },
-  enabled: Boolean(user?.id && Number.isFinite(chatIdNum)),
-});
+  const { data: chatsResponse } = useQuery({
+    queryKey: ["chats"],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: ChatListRow[] }>("/api/chats");
+      return data;
+    },
+    enabled: Boolean(user?.id && Number.isFinite(chatIdNum)),
+  });
+
+  const chatRows = chatsResponse?.data ?? [];
 
   // Use useMemo to prevent unnecessary recalculations
 const peerName = useMemo(() => {
   return (
     peerNameFromNav ??
-    (Array.isArray(chatRows) 
-      ? chatRows.find((c: ChatListRow) => c.id === chatIdNum)?.peer?.name 
-      : null) ??
-    "Peer"
-  );
-}, [peerNameFromNav, chatRows, chatIdNum]);
-
-const peerId = Array.isArray(chatRows) 
-  ? chatRows.find((c: ChatListRow) => c.id === chatIdNum)?.peer?.id 
-  : undefined;
+    chatRows.find((c) => c.id === chatIdNum)?.peer?.name ??
+    "Peer";
+  const peerId = chatRows.find((c) => c.id === chatIdNum)?.peer?.id;
 
   const {
     data: messagesPage,
@@ -204,6 +198,12 @@ const peerId = Array.isArray(chatRows)
     };
   }, [user?.id, chatIdNum, queryClient]);
 
+  // Auto-flush offline message queue
+  useEffect(() => {
+    const cleanup = setupAutoFlush();
+    return cleanup;
+  }, []);
+
   const handleReportUser = async () => {
     if (!chatIdNum) return;
     try {
@@ -240,7 +240,9 @@ const peerId = Array.isArray(chatRows)
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       } catch (err) {
         console.error("ChatRoom Send Error:", err);
-        notify.error("Message failed to send.");
+        // Queue the message for retry when back online
+        enqueueMessage(chatIdNum, text);
+        notify.error("Message queued. Will send when connection is restored.");
       } finally {
         setSending(false);
       }

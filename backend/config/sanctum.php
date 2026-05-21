@@ -16,10 +16,8 @@ return [
     */
 
     'stateful' => [
-        'localhost:5173',
         '127.0.0.1:5173',
-        'peer-space-lvho.vercel.app',
-        'peerspace-aiyh.onrender.com',
+        'localhost:5173',
     ],
 
     /*

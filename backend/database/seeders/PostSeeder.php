@@ -13,28 +13,30 @@ class PostSeeder extends Seeder
      */
     public function run(): void
     {
-        Post::create([
-            'title' => 'Hello from Laravel',
-            'slug' => 'hello-from-laravel',
-            'body' => 'This is the body of the first post.',
-            'user_id' => 1,
-            'category_id' => 1,
-        ]);
+        Post::factory(30)->create();
+        
+        // Post::create([
+        //     'title' => 'Hello from Laravel',
+        //     'slug' => 'hello-from-laravel',
+        //     'body' => 'This is the body of the first post.',
+        //     'user_id' => 1,
+        //     'category_id' => 1,
+        // ]);
 
-        Post::create([
-            'title' => 'Real Data',
-            'slug' => 'real-data',
-            'body' => 'If you see this, the API works.',
-            'user_id' => 1,
-            'category_id' => 2,
-        ]);
+        // Post::create([
+        //     'title' => 'Real Data',
+        //     'slug' => 'real-data',
+        //     'body' => 'If you see this, the API works.',
+        //     'user_id' => 1,
+        //     'category_id' => 2,
+        // ]);
 
-        Post::create([
-            'title' => 'Self-care tips during finals week',
-            'slug' => 'self-care-tips-during-finals-week',
-            'body' => 'Additional confirmation.',
-            'user_id' => 1,
-            'category_id' => 3,
-        ]);
+        // Post::create([
+        //     'title' => 'Self-care tips during finals week',
+        //     'slug' => 'self-care-tips-during-finals-week',
+        //     'body' => 'Additional confirmation.',
+        //     'user_id' => 1,
+        //     'category_id' => 3,
+        // ]);
     }
 }

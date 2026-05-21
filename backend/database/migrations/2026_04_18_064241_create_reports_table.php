@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('reports', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Reporter
-            $table->morphs('reportable'); // reportable_id, reportable_type
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->morphs('reportable');
             $table->string('reason');
-            $table->string('status')->default('pending'); // pending, resolved
+            $table->string('status')->default('pending');
             $table->timestamps();
         });
     }

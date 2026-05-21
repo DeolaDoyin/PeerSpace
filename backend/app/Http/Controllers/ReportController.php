@@ -15,12 +15,58 @@ class ReportController extends Controller
 {
     public function index(Request $request)
     {
-        $perPage = min(50, max(1, (int) $request->query('per_page', 20)));
+        $perPage = min(50, max(1, (int) $request->query('per_page', 50)));
 
         $reports = Report::with(['user', 'reportable'])
             ->where('status', 'pending')
             ->latest()
             ->paginate($perPage);
+
+        // Enrich each report with reportable details
+        $reports->getCollection()->transform(function (Report $report) {
+            $reportable = $report->reportable;
+            $content = null;
+            $reportedUser = null;
+
+            if ($reportable) {
+                if ($report->reportable_type === Post::class) {
+                    $content = [
+                        'id' => $reportable->id,
+                        'title' => $reportable->title,
+                        'slug' => $reportable->slug,
+                        'body' => $reportable->body,
+                        'type' => 'post',
+                    ];
+                    $reportedUser = $reportable->creator ? [
+                        'id' => $reportable->creator->id,
+                        'name' => $reportable->creator->name,
+                    ] : null;
+                } elseif ($report->reportable_type === Comment::class) {
+                    $content = [
+                        'id' => $reportable->id,
+                        'content' => $reportable->content,
+                        'post_id' => $reportable->post_id,
+                        'type' => 'comment',
+                    ];
+                    $reportedUser = $reportable->user ? [
+                        'id' => $reportable->user->id,
+                        'name' => $reportable->user->name,
+                    ] : null;
+                }
+            }
+
+            return [
+                'id' => $report->id,
+                'status' => $report->status,
+                'created_at' => $report->created_at,
+                'reporter' => $report->user ? [
+                    'id' => $report->user->id,
+                    'name' => $report->user->name,
+                ] : null,
+                'content' => $content,
+                'reported_user' => $reportedUser,
+            ];
+        });
 
         return response()->json($reports);
     }
@@ -35,8 +81,14 @@ class ReportController extends Controller
         $typeClass = $validated['reportable_type'] === 'post' ? Post::class : Comment::class;
 
         // Ensure target exists
-        if (!$typeClass::find($validated['reportable_id'])) {
+        $target = $typeClass::find($validated['reportable_id']);
+        if (!$target) {
             return response()->json(['error' => 'Target not found'], 404);
+        }
+
+        // Prevent reporting own content
+        if ($target->user_id === $request->user()->id) {
+            return response()->json(['error' => 'You cannot report your own content.'], 422);
         }
 
         // Prevent duplicate reports from the same user

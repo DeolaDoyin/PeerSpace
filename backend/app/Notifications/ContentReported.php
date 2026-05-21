@@ -36,6 +36,7 @@ class ContentReported extends Notification implements ShouldBroadcast, ShouldQue
             'message' => "{$this->reporter->name} reported a {$this->reportableType}.",
             'reportable_type' => $this->reportableType,
             'reportable_id' => $this->reportableId,
+            'link' => '/reports',
         ];
     }
 

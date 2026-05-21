@@ -21,13 +21,7 @@ class ChatBroadcastTest extends TestCase
         $b = User::factory()->create();
 
         Sanctum::actingAs($a);
-
-        // Change 'user_id' => $b->id to 'username' => $b->name
-        $response = $this->postJson('/api/chats', ['username' => $b->name]);
-        
-        // Safety check: ensure the chat was actually created before proceeding
-        $response->assertCreated(); 
-        $chatId = $response->json('id');
+        $chatId = $this->postJson('/api/chats', ['username' => $b->name])->json('id');
 
         $this->postJson("/api/chats/{$chatId}/messages", ['body' => 'Hello over WS'])->assertCreated();
 

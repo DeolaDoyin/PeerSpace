@@ -16,11 +16,22 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi(); // Required for Sanctum/React auth
 
+        // Sanitize all API input to prevent XSS
+        $middleware->api(prepend: [
+            \App\Http\Middleware\SanitizeInput::class,
+        ]);
+
+        // Enforce absolute session lifetime
+        $middleware->api(append: [
+            \App\Http\Middleware\AbsoluteSessionTimeout::class,
+        ]);
+
         $middleware->alias([
             'moderator' => \App\Http\Middleware\EnsureUserIsModerator::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
             'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
+            'account-age' => \App\Http\Middleware\RequireAccountAge::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

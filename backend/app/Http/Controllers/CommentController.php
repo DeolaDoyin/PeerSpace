@@ -5,12 +5,17 @@ namespace App\Http\Controllers;
 use App\Events\CommentCreated;
 use App\Models\Post;
 use App\Models\Comment;
+use App\Models\Report;
+use App\Models\User;
 use App\Notifications\NewComment;
 use App\Notifications\NewCommentOnFollowedPost;
 use App\Notifications\CommentReplyReceived;
+use App\Notifications\ContentReported;
+use App\Services\CrisisKeywordService;
 use App\Notifications\ContentDeleted;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class CommentController extends Controller
 {
@@ -39,6 +44,50 @@ class CommentController extends Controller
             'user_id' => auth()->id(), // The currently logged in user
             'parent_id' => $request->parent_id,
         ]);
+
+        $currentUser = auth()->user();
+
+        // Auto-flag content from new accounts (less than 24 hours old)
+        $isNewAccount = $currentUser->created_at && $currentUser->created_at->diffInHours(now()) < 24;
+        if ($isNewAccount) {
+            $existingReport = Report::where('reportable_id', $comment->id)
+                ->where('reportable_type', Comment::class)
+                ->where('status', 'pending')
+                ->exists();
+
+            if (!$existingReport) {
+                Report::create([
+                    'user_id' => $currentUser->id,
+                    'reportable_id' => $comment->id,
+                    'reportable_type' => Comment::class,
+                    'status' => 'pending',
+                ]);
+
+                $moderators = User::whereIn('role', ['admin', 'moderator'])->get();
+                Notification::send($moderators, new ContentReported('comment', $comment->id, $currentUser));
+            }
+        }
+
+        // Check for crisis keywords and auto-report if detected
+        $crisisCheck = CrisisKeywordService::check($request->content);
+        if ($crisisCheck['matched'] && $crisisCheck['severity'] !== 'low') {
+            $existingReport = Report::where('reportable_id', $comment->id)
+                ->where('reportable_type', Comment::class)
+                ->where('status', 'pending')
+                ->exists();
+
+            if (!$existingReport) {
+                Report::create([
+                    'user_id' => $currentUser->id,
+                    'reportable_id' => $comment->id,
+                    'reportable_type' => Comment::class,
+                    'status' => 'pending',
+                ]);
+
+                $moderators = User::whereIn('role', ['admin', 'moderator'])->get();
+                Notification::send($moderators, new ContentReported('comment', $comment->id, $currentUser));
+            }
+        }
 
         // 3. Send notifications
         $postOwner = $post->creator;
@@ -70,7 +119,15 @@ class CommentController extends Controller
         $comment->load('user');
         broadcast(new CommentCreated($comment))->toOthers();
 
-        return response()->json($comment);
+        $response = response()->json($comment);
+
+        // If crisis keywords detected, include helpline info in response headers
+        if ($crisisCheck['matched'] && $crisisCheck['severity'] !== 'low') {
+            $response->header('X-Crisis-Detected', 'true');
+            $response->header('X-Crisis-Helplines', json_encode(CrisisKeywordService::getHelplines()));
+        }
+
+        return $response;
     }
 
     public function destroy(Comment $comment)

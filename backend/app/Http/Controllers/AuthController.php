@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\UniversityEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -42,15 +43,32 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users', new UniversityEmail],
+            'university' => 'required|string|max:255',
             'password' => 'required|string|min:8|confirmed',
         ]);
+
+        // Check for potential ban evasion (multiple accounts from same IP) - production only
+        $ip = $request->ip();
+        if (app()->environment('production') && \App\Models\UserRegistration::hasTooManyFromIp($ip)) {
+            return response()->json([
+                'message' => 'Too many accounts have been created from this network. Please try again later.'
+            ], 429);
+        }
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'university' => $request->university,
             'password' => Hash::make($request->password),
-            'account_status' => 'active', // Default status from your ERD
+            'account_status' => 'active',
+        ]);
+
+        // Store registration metadata for ban evasion detection
+        \App\Models\UserRegistration::create([
+            'user_id' => $user->id,
+            'ip_address' => $ip,
+            'user_agent' => $request->userAgent(),
         ]);
 
         event(new \Illuminate\Auth\Events\Registered($user));
@@ -206,7 +224,7 @@ class AuthController extends Controller
             }
 
             Auth::login($user);
-            $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+            $frontendUrl = config('app.frontend_url', 'http://127.0.0.1:5173');
 
             // For newly-created social accounts, send verification email and
             // route them through the same verification flow as regular signup.
@@ -256,7 +274,7 @@ class AuthController extends Controller
             ]);
             // #endregion
             \Log::error('Socialite Error', ['exception' => $e]);
-            $frontendUrl = config('app.frontend_url', 'http://localhost:5173');
+            $frontendUrl = config('app.frontend_url', 'http://127.0.0.1:5173');
             return redirect()->away($frontendUrl . "/auth?error=oauth_failed");
         }
     }

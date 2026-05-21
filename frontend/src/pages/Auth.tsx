@@ -16,6 +16,7 @@ const Auth = () => {
   const location = useLocation();
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
+  const [university, setUniversity] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -62,8 +63,15 @@ const Auth = () => {
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!username.trim()) newErrors.username = "Username is required";
-    if (!isLogin && !email.includes("@"))
-      newErrors.email = "Valid email required";
+    if (!isLogin && !university.trim())
+      newErrors.university = "University is required";
+    if (!isLogin) {
+      if (!email.includes("@")) {
+        newErrors.email = "Valid email required";
+      } else if (!/(\.edu|\.ac\.uk)$/i.test(email)) {
+        newErrors.email = "A valid academic email (.edu, .ac.uk) is required";
+      }
+    }
     if (!password || password.length < 8)
       newErrors.password = "Min 8 characters";
     if (!isLogin && password !== confirmPassword)
@@ -82,6 +90,7 @@ const Auth = () => {
         ? { login: username, password, remember }
         : {
             name: username,
+            university,
             email,
             password,
             password_confirmation: confirmPassword,
@@ -216,20 +225,43 @@ const Auth = () => {
 
             {!isLogin && (
               <FloatingInput
-                label="Email Address"
-                type="email"
-                value={email}
+                label="University Name"
+                type="text"
+                value={university}
                 onChange={(e) => {
-                  setEmail(e.target.value);
+                  setUniversity(e.target.value);
                   setErrors((prev) => {
                     const copy = { ...prev };
-                    delete copy.email;
+                    delete copy.university;
                     return copy;
                   });
                 }}
-                error={errors.email}
-                autoComplete="email"
+                error={errors.university}
+                autoComplete="organization"
               />
+            )}
+
+            {!isLogin && (
+              <div className="space-y-1">
+                <FloatingInput
+                  label="Academic Email Address"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.email;
+                      return copy;
+                    });
+                  }}
+                  error={errors.email}
+                  autoComplete="email"
+                />
+                <p className="text-xs text-muted-foreground px-1">
+                  You must use a valid university email (.edu, .ac.uk).
+                </p>
+              </div>
             )}
 
             <div className="space-y-2">
@@ -269,7 +301,9 @@ const Auth = () => {
                   onChange={(e) => setRemember(e.target.checked)}
                   className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
-                <span className="text-sm text-muted-foreground">Remember me</span>
+                <span className="text-sm text-muted-foreground">
+                  Remember me
+                </span>
               </label>
             )}
 
@@ -297,6 +331,7 @@ const Auth = () => {
                 onClick={() => {
                   setIsLogin(!isLogin);
                   setUsername("");
+                  setUniversity("");
                   setPassword("");
                   setConfirmPassword("");
                   setErrors({});
