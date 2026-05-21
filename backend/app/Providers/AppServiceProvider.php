@@ -48,6 +48,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->ip());
         });
 
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinute(3)->by($request->ip());
+        });
+
         RateLimiter::for('suggest-alias', function (Request $request) {
             return Limit::perMinute(30)->by($request->ip());
         });

@@ -89,11 +89,10 @@ class ModerationTest extends TestCase
     //         'reason' => 'inappropriate content'
     //     ]);
 
-    //     $response->assertStatus(201);
-    //     $this->assertDatabaseHas('reports', [
-    //         'reportable_id' => $post->id,
-    //         'reason' => 'inappropriate content',
-    //         'status' => 'pending'
-    //     ]);
-    // }
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('reports', [
+            'reportable_id' => $post->id,
+            'status' => 'pending'
+        ]);
+    }
 }

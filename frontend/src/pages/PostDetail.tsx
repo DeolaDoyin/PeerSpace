@@ -21,6 +21,7 @@ import {
   Minus,
   Plus,
   Pin,
+  Pencil,
 } from "lucide-react";
 import LikeButton from "@/components/LikeButton";
 import { Button } from "@/components/ui/button";
@@ -196,7 +197,8 @@ const CommentItem = ({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-40">
                     {currentUser?.role !== "admin" &&
-                      currentUser?.role !== "moderator" && (
+                      currentUser?.role !== "moderator" &&
+                      currentUser?.id !== node.user_id && (
                         <DropdownMenuItem
                           onClick={() => openReportModal(node.id, "comment")}
                         >
@@ -685,7 +687,7 @@ const PostDetail = () => {
                   <span>Hide</span>
                 </DropdownMenuItem>
 
-                {user?.role !== "admin" && user?.role !== "moderator" && (
+                {user?.role !== "admin" && user?.role !== "moderator" && user?.id !== post?.creator?.id && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -710,7 +712,16 @@ const PostDetail = () => {
                 {(user?.role === "admin" ||
                   user?.role === "moderator" ||
                   user?.id === post?.creator?.id) && (
-                  <AlertDialog>
+                  <>
+                    {user?.id === post?.creator?.id && (
+                      <DropdownMenuItem
+                        onClick={() => navigate(`/posts/${post.slug}/edit`)}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        <span>Edit</span>
+                      </DropdownMenuItem>
+                    )}
+                    <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <DropdownMenuItem
                         onSelect={(e) => e.preventDefault()}
@@ -739,6 +750,7 @@ const PostDetail = () => {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

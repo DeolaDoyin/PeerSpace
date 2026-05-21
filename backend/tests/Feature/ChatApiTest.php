@@ -19,7 +19,6 @@ class ChatApiTest extends TestCase
 
         Sanctum::actingAs($a);
 
-        // Changed user_id to username
         $first = $this->postJson('/api/chats', ['username' => $b->name]);
         $first->assertCreated();
         $first->assertJsonPath('type', 'direct');
@@ -28,7 +27,6 @@ class ChatApiTest extends TestCase
         $chatId = $first->json('id');
         $this->assertIsInt($chatId);
 
-        // Changed user_id to username
         $second = $this->postJson('/api/chats', ['username' => $b->name]);
         $second->assertOk();
         $this->assertSame($chatId, $second->json('id'));
@@ -40,11 +38,8 @@ class ChatApiTest extends TestCase
         $invalidUsername = 'nonexistent_user_123';
         Sanctum::actingAs($a);
 
-        // Test self-chat rejection
         $this->postJson('/api/chats', ['username' => $a->name])->assertStatus(422);
-        
-        // Test non-existent username
-        $this->postJson('/api/chats', ['username' => $invalidUsername])->assertUnprocessable();
+        $this->postJson('/api/chats', ['username' => 'nonexistent_user_xyz'])->assertUnprocessable();
     }
 
     public function test_index_lists_chats_for_member_only(): void
@@ -52,16 +47,12 @@ class ChatApiTest extends TestCase
         $a = User::factory()->create();
         $b = User::factory()->create();
         Sanctum::actingAs($a);
-        
-        // Already using username here - good!
         $this->postJson('/api/chats', ['username' => $b->name])->assertCreated();
 
         $list = $this->getJson('/api/chats');
         $list->assertOk();
         $list->assertJsonCount(1, 'data');
-        
-        // Ensure the fragment match matches your API resource structure
-        $list->assertJsonFragment(['id' => $b->id, 'name' => $b->name]);
+        $list->assertJsonFragment(['peer' => ['id' => $b->id, 'name' => $b->name]]);
     }
 
     public function test_non_member_cannot_list_or_read_messages(): void
@@ -71,9 +62,7 @@ class ChatApiTest extends TestCase
         $c = User::factory()->create();
 
         Sanctum::actingAs($a);
-        // Changed user_id to username
-        $response = $this->postJson('/api/chats', ['username' => $b->name]);
-        $chatId = $response->json('id');
+        $chatId = $this->postJson('/api/chats', ['username' => $b->name])->json('id');
 
         Sanctum::actingAs($c);
         $this->getJson("/api/chats/{$chatId}/messages")->assertForbidden();
@@ -85,10 +74,7 @@ class ChatApiTest extends TestCase
         $a = User::factory()->create();
         $b = User::factory()->create();
         Sanctum::actingAs($a);
-        
-        // Changed user_id to username
-        $response = $this->postJson('/api/chats', ['username' => $b->name]);
-        $chatId = $response->json('id');
+        $chatId = $this->postJson('/api/chats', ['username' => $b->name])->json('id');
 
         $this->postJson("/api/chats/{$chatId}/messages", ['body' => 'Hello'])->assertCreated();
         $this->postJson("/api/chats/{$chatId}/messages", ['body' => 'World'])->assertCreated();

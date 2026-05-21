@@ -5,8 +5,11 @@ import {
   User,
   LibraryBig,
   MessageCircle,
+  ShieldAlert,
 } from "lucide-react"; // Updated icons
 import { Link, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/api/axios";
 import NotificationBell from "@/components/NotificationBell";
 import ThemeToggleButton from "@/components/ThemeToggle";
 
@@ -19,6 +22,16 @@ interface AppNavbarProps {
 
 const AppNavbar = ({ centerSlot, extraControls }: AppNavbarProps) => {
   const location = useLocation();
+
+  const { data: user } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const { data } = await api.get("/api/user");
+      return data as { id: number; role?: string };
+    },
+  });
+
+  const isModOrAdmin = user?.role === "admin" || user?.role === "moderator";
 
   // Helper to check if a link should be hidden
   const isPage = (path: string) => location.pathname === path;
@@ -68,6 +81,15 @@ const AppNavbar = ({ centerSlot, extraControls }: AppNavbarProps) => {
           {/* Mobile View: Show only toggles/notifications (and any extraControls if provided) */}
           <div className="flex md:hidden items-center gap-1">
             {extraControls}
+            {isModOrAdmin && !isPage("/reports") && (
+              <Link
+                to="/reports"
+                title="Reports"
+                className="text-destructive p-2 hover:bg-muted rounded-full transition-colors"
+              >
+                <ShieldAlert className="h-5 w-5" />
+              </Link>
+            )}
             <ThemeToggleButton />
             <NotificationBell />
           </div>
@@ -114,6 +136,16 @@ const AppNavbar = ({ centerSlot, extraControls }: AppNavbarProps) => {
                 className="text-primary p-2 hover:bg-muted rounded-full transition-colors"
               >
                 <User className="h-5 w-5" />
+              </Link>
+            )}
+
+            {isModOrAdmin && !isPage("/reports") && (
+              <Link
+                to="/reports"
+                title="Reports"
+                className="text-destructive p-2 hover:bg-muted rounded-full transition-colors"
+              >
+                <ShieldAlert className="h-5 w-5" />
               </Link>
             )}
 

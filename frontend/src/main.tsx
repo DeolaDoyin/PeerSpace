@@ -22,6 +22,7 @@ const Profile = lazy(() => import("@/pages/Profile"));
 const Contact = lazy(() => import("@/pages/Contact"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const CreatePost = lazy(() => import("@/pages/CreatePost"));
+const EditPost = lazy(() => import("@/pages/EditPost"));
 const PostDetail = lazy(() => import("@/pages/PostDetail"));
 const VerifyEmailNotice = lazy(() => import("@/pages/VerifyEmailNotice"));
 const VerifyEmailConfirm = lazy(() => import("@/pages/VerifyEmailConfirm"));
@@ -29,10 +30,15 @@ const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const SavedPosts = lazy(() => import("@/pages/SavedPosts"));
 const UserProfile = lazy(() => import("@/pages/UserProfile"));
 const MyPosts = lazy(() => import("@/pages/MyPosts"));
+const Reports = lazy(() => import("@/pages/Reports"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutes - data considered fresh
+      gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache
+      refetchOnWindowFocus: false, // don't refetch on tab switch
+      retry: 1, // only retry once on failure
       onError: (err: DefaultError) => {
         try {
           notify.error(err?.message || "Network error");
@@ -63,6 +69,7 @@ const App = () => (
                 {/* Main app */}
                 <Route path="/forum" element={<Forum />} />
                 <Route path="/posts/create" element={<CreatePost />} />
+                <Route path="/posts/:slug/edit" element={<EditPost />} />
                 <Route path="/posts/:slug" element={<PostDetail />} />
                 <Route path="/verify-email" element={<VerifyEmailNotice />} />
 
@@ -76,6 +83,7 @@ const App = () => (
                 <Route path="/saved-posts" element={<SavedPosts />} />
                 <Route path="/users/:userId" element={<UserProfile />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/reports" element={<Reports />} />
 
                 {/* Fallback */}
                 <Route path="*" element={<Navigate to="/" />} />

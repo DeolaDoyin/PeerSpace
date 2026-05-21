@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
-import { ArrowLeft, Loader2, AlertCircle, MessageCircle } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, MessageCircle, Search } from "lucide-react";
 import api from "@/api/axios";
 import AppNavbar from "@/components/AppNavbar";
 import BottomNav from "@/components/BottomNav";
@@ -31,6 +32,7 @@ interface ProfileResponse {
 
 const MyPosts = () => {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -56,7 +58,20 @@ const MyPosts = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <AppNavbar />
+      <AppNavbar
+        centerSlot={
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search posts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm bg-muted border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            />
+          </div>
+        }
+      />
       <div className="sticky top-16 z-10 bg-card border-b border-border px-4 py-3">
         <button
           onClick={() => navigate("/profile")}
@@ -89,7 +104,20 @@ const MyPosts = () => {
           </div>
         )}
 
-        {!isLoading && !isError && profile && (
+        {!isLoading && !isError && profile && (() => {
+          const filteredPosts = searchQuery.trim()
+            ? profile.posts.filter((post) =>
+                post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                post.body.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+            : profile.posts;
+          const filteredComments = searchQuery.trim()
+            ? profile.comments.filter((comment) =>
+                comment.content.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+            : profile.comments;
+
+          return (
           <>
             {/* Posts */}
             <div className="mt-4 bg-card">
@@ -99,16 +127,16 @@ const MyPosts = () => {
                   Posts
                 </h2>
                 <span className="text-xs text-muted-foreground ml-auto">
-                  {profile.posts.length}
+                  {filteredPosts.length}
                 </span>
               </div>
               <div className="p-4 space-y-3">
-                {profile.posts.length === 0 ? (
+                {filteredPosts.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    You haven't posted anything yet.
+                    {searchQuery.trim() ? "No posts match your search." : "You haven't posted anything yet."}
                   </p>
                 ) : (
-                  profile.posts.map((post) => (
+                  filteredPosts.map((post) => (
                     <Card
                       key={post.id}
                       className="rounded-xl border-border p-4 transition-colors hover:border-primary/40 bg-muted/30 shadow-none"
@@ -146,16 +174,16 @@ const MyPosts = () => {
                   Comments
                 </h2>
                 <span className="text-xs text-muted-foreground ml-auto">
-                  {profile.comments.length}
+                  {filteredComments.length}
                 </span>
               </div>
               <div className="p-4 space-y-3">
-                {profile.comments.length === 0 ? (
+                {filteredComments.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    You haven't commented yet.
+                    {searchQuery.trim() ? "No comments match your search." : "You haven't commented yet."}
                   </p>
                 ) : (
-                  profile.comments.map((comment) => (
+                  filteredComments.map((comment) => (
                     <Card
                       key={comment.id}
                       className="rounded-xl border-border p-4 transition-colors hover:border-primary/40 bg-muted/30 shadow-none"
@@ -184,7 +212,8 @@ const MyPosts = () => {
               </div>
             </div>
           </>
-        )}
+          );
+        })()}
       </main>
 
       <BottomNav />

@@ -4,7 +4,7 @@ import api from "@/api/axios";
 import { extractErrorMessage } from "@/lib/errors";
 import { notify } from "@/lib/notify";
 import type { Category } from "@/types";
-import { Loader2, Send, X } from "lucide-react";
+import { Loader2, Send, X, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // ...page-level controls removed; modal contains its own header
 import {
@@ -14,6 +14,8 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogTrigger,
+  AlertDialogFooter,
+  AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 
 const CreatePost = () => {
@@ -26,6 +28,8 @@ const CreatePost = () => {
   const [fetchingCategories, setFetchingCategories] = useState(true);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [crisisHelplines, setCrisisHelplines] = useState<Array<{name: string; number: string; available: string}>>([]);
+  const [showCrisisModal, setShowCrisisModal] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -60,14 +64,27 @@ const CreatePost = () => {
     setError("");
 
     try {
-      const { data } = await api.post("/api/posts", {
+      const response = await api.post("/api/posts", {
         title,
         body,
         category_id: parseInt(categoryId),
         is_pinned: false,
       });
+
+      // Check for crisis detection headers
+      const crisisDetected = response.headers?.['x-crisis-detected'];
+      const helplinesHeader = response.headers?.['x-crisis-helplines'];
+      
+      if (crisisDetected === 'true' && helplinesHeader) {
+        try {
+          const helplines = JSON.parse(helplinesHeader);
+          setCrisisHelplines(helplines);
+          setShowCrisisModal(true);
+        } catch {}
+      }
+
       // Navigate to the post detail or back to forum
-      navigate(`/posts/${data.slug}`);
+      navigate(`/posts/${response.data.slug}`);
     } catch (err) {
       if (err && typeof err === "object" && "response" in err) {
         const e = err as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } };
@@ -256,6 +273,36 @@ const CreatePost = () => {
               </Button>
             </form>
           </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Crisis Helpline Modal */}
+      <AlertDialog open={showCrisisModal} onOpenChange={setShowCrisisModal}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Heart className="h-5 w-5" />
+              We're Here For You
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              It looks like you might be going through a difficult time. You're not alone. 
+              Please reach out to one of these helplines for support:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 my-4">
+            {crisisHelplines.map((helpline, i) => (
+              <div key={i} className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium text-foreground">{helpline.name}</p>
+                <p className="text-lg font-bold text-primary">{helpline.number}</p>
+                <p className="text-xs text-muted-foreground">{helpline.available}</p>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowCrisisModal(false)}>
+              I Understand
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

@@ -20,19 +20,6 @@ use App\Services\RedditAliasService;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ContactController;
 
-
-Route::get('/test-mail-now', function () {
-    try {
-        Mail::raw('Testing PeerSpace Email', function ($message) {
-            $message->to('your-personal-email@gmail.com')->subject('Manual Test');
-        });
-        return "Mail sent attempt finished. Check Render Logs!";
-    } catch (\Exception $e) {
-        Log::error("Mail Failure: " . $e->getMessage());
-        return "Error: " . $e->getMessage();
-    }
-});
-
 Route::get('/health', function () {
     return response()->json(['status' => 'ok'], 200);
 });
@@ -44,12 +31,13 @@ Route::get('/process-queue-secret-789', function (Request $request) {
     }
 
     // This clears the emails waiting in the database
-    Artisan::call('queue:work --stop-when-empty');
+    Artisan::call('queue:work --max-jobs=3 --stop-when-empty');
     
     return response()->json(['message' => 'Queue processed successfully.']);
 });
-Route::middleware(['web', 'throttle:auth'])->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
+
+Route::middleware(['throttle:auth'])->group(function () {
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail'])->middleware('guest')->name('password.email');
     Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('guest')->name('password.store');
