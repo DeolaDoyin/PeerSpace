@@ -179,7 +179,7 @@ const peerId = Array.isArray(chatRows)
     if (!echo) return;
 
     const room = `chat.${chatIdNum}`;
-    const channel = echo.join(room);
+    const channel = echo.private(room);
 
     channel.listen(".message.sent", (payload: MessageSentPayload) => {
       const row = payload.message;
