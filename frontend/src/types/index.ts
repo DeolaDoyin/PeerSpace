@@ -109,29 +109,31 @@ export interface ChatListRow {
   last_message: {
     id: number;
     body: string;
+    encrypted_payload?: string; // 💡 Optional: to decrypt preview on chats index page
+    iv?: string;                // 💡 Optional
     created_at?: string;
   } | null;
   updated_at: string;
 }
 
+// 💡 Updated to support End-to-End Encryption fields
 export interface ChatMessageApi {
   id: number;
   chat_id: number;
   user_id: number;
-  body: string;
+  body: string; // Keeps compatibility with virtual fallback string
+  
+  // E2EE additions
+  encrypted_payload?: string; 
+  iv?: string;                 
+  
   created_at: string;
   sender?: { id: number; name: string } | null;
 }
 
+// 💡 Streamlined to reference ChatMessageApi directly 
 export interface MessageSentPayload {
-  message: {
-    id: number;
-    chat_id: number;
-    user_id: number;
-    body: string;
-    created_at?: string;
-    sender: { id: number; name: string } | null;
-  };
+  message: ChatMessageApi;
 }
 
 export interface DbNotification {

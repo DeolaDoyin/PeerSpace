@@ -25,6 +25,10 @@ export function getEcho(): Echo<"reverb"> | null {
     const host =
       import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
 
+    // 💡 Resolve the clean auth path explicitly
+    // This points to http://localhost:8000/broadcasting/auth if your baseURL is http://localhost:8000/api
+    const cleanAuthUrl = `${api.defaults.baseURL?.replace(/\/api\/?$/, "")}/broadcasting/auth`;
+
     echo = new Echo<"reverb">({
       broadcaster: "reverb",
       key,
@@ -33,16 +37,19 @@ export function getEcho(): Echo<"reverb"> | null {
       wssPort: port,
       forceTLS: scheme === "https",
       enabledTransports: ["ws", "wss"],
-      authEndpoint: `${api.defaults.baseURL}/broadcasting/auth`,
+      authEndpoint: cleanAuthUrl,
       authorizer: (channel) => ({
         authorize: (socketId, callback) => {
           api
-            .post("/broadcasting/auth", {
+            // 💡 1. Use the explicit clean auth URL path matching Laravel's Channels routing
+            .post(cleanAuthUrl, {
               socket_id: socketId,
               channel_name: channel.name,
+            }, {
+              // 💡 2. Enforce credentials sharing so cookies/tokens cross domains securely
+              withCredentials: true 
             })
             .then((response) => {
-              // Laravel /broadcasting/auth returns Pusher-compatible JSON (auth + optional channel_data).
               callback(null, response.data as never);
             })
             .catch((error: unknown) => {

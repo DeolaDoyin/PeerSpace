@@ -39,7 +39,11 @@ class ChatMessageSent implements ShouldBroadcast
                 'id' => $this->message->id,
                 'chat_id' => $this->message->chat_id,
                 'user_id' => $this->message->user_id,
-                'body' => $this->message->body,
+                
+                // 💡 E2EE Changes: Swap plaintext body for secure cryptographic data
+                'encrypted_payload' => $this->message->encrypted_payload,
+                'iv' => $this->message->iv,
+                
                 'created_at' => $this->message->created_at?->toIso8601String(),
                 'sender' => $this->message->sender ? [
                     'id' => $this->message->sender->id,

@@ -30,13 +30,20 @@ class ChatMessageController extends Controller
     {
         $this->authorize('sendMessage', $chat);
 
+        // 💡 1. Swap old string body requirements for incoming E2EE fields
         $data = $request->validate([
-            'body' => ['required', 'string', 'max:5000'],
+            'encrypted_payload' => ['required', 'string'],
+            'iv'                => ['required', 'string'],
+            'body'              => ['nullable', 'string', 'max:5000'], // Optional plain-text fallback fallback
         ]);
 
+        // 💡 2. Map fields to the message schema creation instance
         $message = $chat->messages()->create([
-            'user_id' => $request->user()->id,
-            'body' => $data['body'],
+            'user_id'           => $request->user()->id,
+            'encrypted_payload' => $data['encrypted_payload'],
+            'iv'                => $data['iv'],
+            // Fallback content block placeholder if database field has NOT been made nullable yet:
+            'body'              => $data['body'] ?? '[End-to-End Encrypted Content]',
         ]);
 
         $chat->touch();
@@ -44,14 +51,17 @@ class ChatMessageController extends Controller
         $message->load('sender');
         broadcast(new ChatMessageSent($message))->toOthers();
 
+        // 💡 3. Return full parameters back to the client interface API payload pipeline
         return response()->json([
-            'id' => $message->id,
-            'chat_id' => $message->chat_id,
-            'user_id' => $message->user_id,
-            'body' => $message->body,
-            'created_at' => $message->created_at,
-            'sender' => $message->sender ? [
-                'id' => $message->sender->id,
+            'id'                => $message->id,
+            'chat_id'           => $message->chat_id,
+            'user_id'           => $message->user_id,
+            'body'              => $message->body,
+            'encrypted_payload' => $message->encrypted_payload,
+            'iv'                => $message->iv,
+            'created_at'        => $message->created_at,
+            'sender'            => $message->sender ? [
+                'id'   => $message->sender->id,
                 'name' => $message->sender->name,
             ] : null,
         ], 201);
