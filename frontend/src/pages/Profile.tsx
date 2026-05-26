@@ -315,6 +315,8 @@ const Profile = () => {
       {/* Navbar */}
       <AppNavbar />
 
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+
       {/* Profile Card */}
       <div className="px-4 py-6 bg-card">
         <div className="flex items-start gap-4">
@@ -693,6 +695,7 @@ const Profile = () => {
       <AboutUsModal isOpen={aboutModalOpen} onOpenChange={setAboutModalOpen} />
 
       <BottomNav />
+    </div>
     </div>
   );
 };
