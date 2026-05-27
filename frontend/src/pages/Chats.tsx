@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import api from "@/api/axios";
 import { notify } from "@/lib/notify";
 import { extractErrorMessage } from "@/lib/errors";
+// 💡 Make sure to import your decryption helper function from your utilities file
 import ChatListItem from "@/components/ChatListItem";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,9 @@ export interface ChatListRow {
   last_message: {
     id: number;
     body: string;
+    // 💡 1. Add the encryption fields to your interface so TypeScript recognizes them
+    encrypted_payload?: string | null;
+    iv?: string | null;
     created_at?: string;
   } | null;
   updated_at: string;
@@ -57,14 +61,20 @@ const Chats = () => {
 
   const chats = chatsResponse?.data ?? [];
 
-  const previewText = (chat: ChatListRow) => {
-    if (chat.last_message?.body) {
-      return chat.last_message.body.length > 80
-        ? `${chat.last_message.body.slice(0, 80)}…`
-        : chat.last_message.body;
-    }
-    return "No messages yet";
-  };
+  // 💡 2. Intercept and decrypt the encrypted payload before slicing it for the preview
+// 💡 Update this function in your Chats.tsx file:
+const previewText = (chat: ChatListRow) => {
+  const lastMsg = chat.last_message;
+  if (!lastMsg) return "No messages yet";
+
+  // If it's encrypted, pass a fallback tag or the placeholder text 
+  // because we will decrypt it dynamically inside the row item itself!
+  if (lastMsg.encrypted_payload && lastMsg.iv) {
+    return lastMsg.body; // or "[Encrypted Message]"
+  }
+
+  return lastMsg.body.length > 80 ? `${lastMsg.body.slice(0, 80)}…` : lastMsg.body;
+};
 
   const previewTime = (chat: ChatListRow) => {
     const t = chat.last_message?.created_at ?? chat.updated_at;
@@ -107,7 +117,6 @@ const Chats = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Navbar */}
       <AppNavbar />
 
       <div className="px-4 py-3 border-b border-border bg-card/80 space-y-2">
@@ -158,9 +167,12 @@ const Chats = () => {
           chats.map((chat) => (
             <ChatListItem
               key={chat.id}
+              id={chat.id}
               name={chat.peer?.name ?? "Peer"}
               lastMessage={previewText(chat)}
               time={previewTime(chat)}
+              encryptedPayload={chat.last_message?.encrypted_payload}
+              iv={chat.last_message?.iv}
               onClick={() =>
                 navigate(`/chat/${chat.id}`, {
                   state: { peerName: chat.peer?.name ?? "Peer" },

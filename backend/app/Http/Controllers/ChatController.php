@@ -37,6 +37,9 @@ class ChatController extends Controller
                 'last_message' => $last ? [
                     'id' => $last->id,
                     'body' => $last->body,
+                    // 💡 Pass E2EE payload & IV down to the React frontend mapping collection
+                    'encrypted_payload' => $last->encrypted_payload,
+                    'iv' => $last->iv,
                     'created_at' => $last->created_at,
                     'user_id' => $last->user_id,
                     'sender' => $last->sender ? [
@@ -61,7 +64,7 @@ class ChatController extends Controller
         $data = $request->validate([
             'username' => ['required', 'string', 'exists:users,name'],
         ]);
-            $targetUser = \App\Models\User::where('name', $data['username'])->first();
+        $targetUser = \App\Models\User::where('name', $data['username'])->first();
 
         try {
             [$chat, $created] = $chats->findOrCreateDirectChat($request->user(), (int) $targetUser->id);
@@ -86,6 +89,9 @@ class ChatController extends Controller
             'last_message' => $last ? [
                 'id' => $last->id,
                 'body' => $last->body,
+                // 💡 Pass them here as well for when a chat is instantly opened or created
+                'encrypted_payload' => $last->encrypted_payload,
+                'iv' => $last->iv,
                 'created_at' => $last->created_at,
                 'user_id' => $last->user_id,
                 'sender' => $last->sender ? [
