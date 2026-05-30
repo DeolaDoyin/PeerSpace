@@ -52,7 +52,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <CreatePostProvider>
       <TooltipProvider>
-        <Sonner position="bottom-center" richColors closeButton />
+        <Sonner position="top-center" richColors closeButton />
         <BrowserRouter>
           <ErrorBoundary>
             <Suspense fallback={<LoadingScreen />}>

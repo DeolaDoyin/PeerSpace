@@ -6,9 +6,11 @@ use App\Models\Chat;
 use App\Services\ChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ChatController extends Controller
 {
+    use AuthorizesRequests;
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
