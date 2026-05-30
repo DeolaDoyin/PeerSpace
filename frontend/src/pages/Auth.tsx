@@ -68,7 +68,7 @@ const Auth = () => {
     if (!isLogin) {
       if (!email.includes("@")) {
         newErrors.email = "Valid email required";
-      } else if (!/(\.edu|\.ac\.uk)$/i.test(email)) {
+      } else if (!/(\.edu|\.ac\.uk)(\.[a-z]{2,3})?$/i.test(email)) {
         newErrors.email = "A valid academic email (.edu, .ac.uk) is required";
       }
     }
