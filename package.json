@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev:backend": "cd backend && php artisan serve",
+    "dev:backend": "cd backend && php artisan serve && php artisan reverb:start",
     "dev:frontend": "cd frontend && npm run dev",
     "start": "concurrently --kill-others \"npm run dev:backend\" \"npm run dev:frontend\""
   },
