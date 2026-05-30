@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\ChatMessageSent;
 use App\Models\Chat;
-use App\Notifications\NewMessageNotification; // 💡 Import your notification class
+use App\Notifications\NewMessageNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,23 +34,22 @@ class ChatMessageController extends Controller
         $data = $request->validate([
             'encrypted_payload' => ['required', 'string'],
             'iv'                => ['required', 'string'],
-            'body'              => ['nullable', 'string', 'max:5000'], 
+            'body'              => ['nullable', 'string', 'max:5000'],
         ]);
 
         $message = $chat->messages()->create([
             'user_id'           => $request->user()->id,
             'encrypted_payload' => $data['encrypted_payload'],
             'iv'                => $data['iv'],
-            'body'              => $data['body'] ?? '[End-to-End Encrypted Content]',
         ]);
 
         $chat->touch();
         $message->load('sender');
-        
-        // Broadcast the real-time event
-        broadcast(new ChatMessageSent($message))->toOthers();
 
-        // 💡 SAFE RECIPIENT LOOKUP: Try common relationship styles dynamically
+        // Broadcast to ALL channel members — frontend filters out its own messages
+        // by user_id, avoiding the fragile X-Socket-ID / toOthers() mechanism.
+        broadcast(new ChatMessageSent($message));
+
         $authId = $request->user()->id;
         $recipient = null;
 
@@ -59,19 +58,16 @@ class ChatMessageController extends Controller
         } elseif (method_exists($chat, 'participants')) {
             $recipient = $chat->participants()->where('users.id', '!=', $authId)->first();
         } else {
-            // Fallback: If it's a direct conversation table with explicit user IDs
             $recipientId = ($chat->user_one_id == $authId) ? $chat->user_two_id : $chat->user_one_id;
             if ($recipientId) {
                 $recipient = \App\Models\User::find($recipientId);
             }
         }
 
-        // Only notify if we successfully located a valid peer model record
         if ($recipient) {
             try {
                 $recipient->notify(new NewMessageNotification($message));
             } catch (\Exception $e) {
-                // Log notification errors silently so it doesn't break the actual message delivery payload
                 \Log::error('E2EE Notification Failed: ' . $e->getMessage());
             }
         }
@@ -89,11 +85,5 @@ class ChatMessageController extends Controller
                 'name' => $message->sender->name,
             ] : null,
         ], 201);
-        \Log::info('RAW', [
-    'iv_len' => strlen($data['iv']),
-    'payload_len' => strlen($data['encrypted_payload']),
-    'iv' => $data['iv'],
-    'payload' => substr($data['encrypted_payload'], 0, 60),
-]);
     }
 }

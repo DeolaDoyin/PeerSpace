@@ -1,12 +1,12 @@
 {
   "name": "peerspace",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
   "scripts": {
-    "dev:backend": "cd backend && php artisan serve && php artisan reverb:start",
+    "dev:serve": "cd backend && php artisan serve",
+    "dev:reverb": "cd backend && php artisan reverb:start",
+    "dev:queue": "cd backend && php artisan queue:work",
     "dev:frontend": "cd frontend && npm run dev",
-    "start": "concurrently --kill-others \"npm run dev:backend\" \"npm run dev:frontend\""
+    "start": "concurrently --kill-others -n \"serve,reverb,queue,frontend\" -c \"blue,green,yellow,magenta\" \"npm run dev:serve\" \"npm run dev:reverb\" \"npm run dev:queue\" \"npm run dev:frontend\""
   },
   "repository": {
     "type": "git",

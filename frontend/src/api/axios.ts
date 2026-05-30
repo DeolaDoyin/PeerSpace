@@ -4,12 +4,20 @@ import { extractErrorMessage } from "@/lib/errors";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://peerspace-aiyh.onrender.com',
-  withCredentials: true, // Required for Sanctum cookies
+  withCredentials: true,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
   },
 });
+
+// Lazily resolved Echo instance — set by echo.ts after it initialises.
+// This avoids a circular import between axios.ts and echo.ts.
+let _getSocketId: (() => string | null) | null = null;
+
+export function registerSocketIdResolver(fn: () => string | null) {
+  _getSocketId = fn;
+}
 
 api.interceptors.request.use((config) => {
   // Manually read XSRF-TOKEN cookie because Axios drops it for cross-port requests
@@ -22,7 +30,13 @@ api.interceptors.request.use((config) => {
     config.headers["X-XSRF-TOKEN"] = decodeURIComponent(xsrfToken);
   }
 
-  // Token logic removed. Relying strictly on cookies.
+  // Required for broadcast()->toOthers() — tells Laravel which socket to exclude
+  // so the sender doesn't receive their own message back via WebSocket.
+  const socketId = _getSocketId?.();
+  if (socketId) {
+    config.headers["X-Socket-ID"] = socketId;
+  }
+
   return config;
 });
 
@@ -30,7 +44,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // If they are not already on auth page, redirect them
       if (
         window.location.pathname !== "/auth" &&
         window.location.pathname !== "/"
@@ -39,11 +52,8 @@ api.interceptors.response.use(
       }
     }
 
-    // For other errors, show a non-blocking toast with a helpful message
     try {
       const msg = extractErrorMessage(error);
-      // Avoid spamming toasts for expected 422 validation on form pages (caller may handle)
-      // And avoid toasting on 401 which is an expected state for unauthenticated users checking session
       if (error.response?.status !== 422 && error.response?.status !== 401) {
         notify.error(msg);
       }

@@ -1,7 +1,7 @@
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 
-import api from "@/api/axios";
+import api, { registerSocketIdResolver } from "@/api/axios";
 
 declare global {
   interface Window {
@@ -25,8 +25,6 @@ export function getEcho(): Echo<"reverb"> | null {
     const host =
       import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
 
-    // 💡 Resolve the clean auth path explicitly
-    // This points to http://localhost:8000/broadcasting/auth if your baseURL is http://localhost:8000/api
     const cleanAuthUrl = `${api.defaults.baseURL?.replace(/\/api\/?$/, "")}/broadcasting/auth`;
 
     echo = new Echo<"reverb">({
@@ -41,13 +39,11 @@ export function getEcho(): Echo<"reverb"> | null {
       authorizer: (channel) => ({
         authorize: (socketId, callback) => {
           api
-            // 💡 1. Use the explicit clean auth URL path matching Laravel's Channels routing
             .post(cleanAuthUrl, {
               socket_id: socketId,
               channel_name: channel.name,
             }, {
-              // 💡 2. Enforce credentials sharing so cookies/tokens cross domains securely
-              withCredentials: true 
+              withCredentials: true
             })
             .then((response) => {
               callback(null, response.data as never);
@@ -61,6 +57,11 @@ export function getEcho(): Echo<"reverb"> | null {
         },
       }),
     });
+
+    // Register the socket ID resolver so axios can attach X-Socket-ID to
+    // every outgoing request, enabling broadcast()->toOthers() in Laravel
+    // to correctly exclude the sender from receiving their own broadcast.
+    registerSocketIdResolver(() => echo?.socketId() ?? null);
   }
 
   return echo;
