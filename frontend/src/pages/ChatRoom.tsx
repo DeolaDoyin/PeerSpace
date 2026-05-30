@@ -6,7 +6,7 @@ import { ArrowLeft, Loader2, MoreVertical, Flag, User, ShieldOff } from "lucide-
 import api from "@/api/axios";
 import { getEcho } from "@/lib/echo";
 import { enqueueMessage, setupAutoFlush } from "@/lib/messageQueue";
-import notify from "@/lib/notify";
+import { notify } from "@/lib/notify"; 
 import { toast } from "@/components/ui/toast";
 import MessageBubble from "@/components/MessageBubble";
 import ThemeToggleButton from "@/components/ThemeToggle";
@@ -15,7 +15,7 @@ import AnonAvatar from "@/components/AnonAvatar";
 import type { ChatListRow } from "@/pages/Chats";
 import type { ChatMessageApi, MessageSentPayload } from "@/types";
 
-// 💡 Import Crypto Helpers
+// Crypto Helpers
 import { encryptMessage, decryptMessage, importKeyFromString } from "@/lib/crypto";
 
 import {
@@ -86,9 +86,16 @@ const ChatRoom = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
-  
+
   // State to store messages decrypted locally in memory
   const [decryptedMessages, setDecryptedMessages] = useState<Record<string, string>>({});
+
+  // If a key already exists in localStorage for this chat (e.g. page refresh),
+  // mark it ready immediately so decryption doesn't wait for a new handshake.
+  // If no key exists yet, stay false until the WebSocket handshake delivers one.
+  const [roomKeyReady, setRoomKeyReady] = useState<boolean>(
+    () => Boolean(localStorage.getItem(`room_key_${chatIdNum}`))
+  );
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -138,10 +145,14 @@ const ChatRoom = () => {
     enabled: Boolean(user?.id && Number.isFinite(chatIdNum) && chatIdNum > 0),
   });
 
-  // Helper function to handle async decryption of an entire page
+  // Decrypt page payloads — only runs if key is present
   const decryptPagePayloads = useCallback(async (rows: ChatMessageApi[]) => {
     const rawKeyStr = localStorage.getItem(`room_key_${chatIdNum}`);
-    if (!rawKeyStr) return;
+
+    if (!rawKeyStr) {
+      console.log("Decryption postponed: room key not established yet.");
+      return;
+    }
 
     try {
       const cryptoKey = await importKeyFromString(rawKeyStr);
@@ -149,11 +160,13 @@ const ChatRoom = () => {
 
       await Promise.all(
         rows.map(async (row) => {
-          if (decryptedMessages[row.id] || !row.encrypted_payload || !row.iv) return;
+          if (!row.encrypted_payload || !row.iv) return;
+
           try {
             const plainText = await decryptMessage(row.encrypted_payload, row.iv, cryptoKey);
             newDecryptedMap[row.id] = plainText;
           } catch (e) {
+            console.error(`Decryption failed for row ${row.id}:`, e);
             newDecryptedMap[row.id] = "[Error decrypting message payload]";
           }
         })
@@ -165,14 +178,15 @@ const ChatRoom = () => {
     } catch (err) {
       console.error("Crypto initialization failed:", err);
     }
-  }, [chatIdNum, decryptedMessages]);
+  }, [chatIdNum]);
 
-  // Decrypt records when fresh API records land via React-Query
+  // FIX: Use roomKeyReady instead of localStorage.getItem() in the dep array.
+  // When the key arrives via WebSocket, setRoomKeyReady(true) triggers this effect.
   useEffect(() => {
     if (messagesPage?.data) {
       decryptPagePayloads(messagesPage.data);
     }
-  }, [messagesPage?.data, decryptPagePayloads]);
+  }, [messagesPage?.data, decryptPagePayloads, roomKeyReady]);
 
   // Map messages dynamically for the visual layout pipeline
   const messages: UiMessage[] = useMemo(() => {
@@ -206,54 +220,102 @@ const ChatRoom = () => {
     }
   }, [messages]);
 
-  // 💡 AUTO-GENERATE MISSING KEYS ON ROOM LOAD
-  useEffect(() => {
-    if (!Number.isFinite(chatIdNum) || chatIdNum <= 0) return;
-
-    async function ensureEncryptionKeyExists() {
-      const keyStorageKey = `room_key_${chatIdNum}`;
-      const existingKey = localStorage.getItem(keyStorageKey);
-
-      if (!existingKey) {
-        console.log(`Key missing for room ${chatIdNum}. Generating unique E2EE key...`);
-        try {
-          const { generateRandomRoomKeyString } = await import("@/lib/crypto");
-          const newKey = await generateRandomRoomKeyString();
-          localStorage.setItem(keyStorageKey, newKey);
-          toast.success("Secure end-to-end encryption tunnel established.");
-        } catch (err) {
-          console.error("Failed to safely generate cryptographic room key:", err);
-        }
-      }
-    }
-
-    ensureEncryptionKeyExists();
-  }, [chatIdNum]);
-
-  // Handle Real-time listening with decryption tracking
+  // Cooperative handshake engine
   useEffect(() => {
     const uid = user?.id;
-    if (!uid || !Number.isFinite(chatIdNum) || chatIdNum <= 0) return;
+    if (!uid || !Number.isFinite(chatIdNum) || chatIdNum <= 0 || !peerId) return;
 
     const echo = getEcho();
     if (!echo) return;
 
     const room = `chat.${chatIdNum}`;
-    
-    // 💡 Changed from echo.private() to echo.join() to match Presence Channel schema setup
     const channel = echo.join(room);
 
+    const keyStorageKey = `room_key_${chatIdNum}`;
+    const existingKey = localStorage.getItem(keyStorageKey);
+
+    // If a key already exists (e.g. page refresh), mark ready immediately and
+    // broadcast it to any peer who may be waiting — never regenerate.
+    if (existingKey) {
+      setRoomKeyReady(true);
+      channel.whisper("share-room-key", { key: existingKey });
+    } else if (uid < peerId) {
+      // No key exists yet — lower-ID peer is responsible for generating one
+      console.log("Acting as primary channel partner. Constructing key tunnel...");
+      import("@/lib/crypto").then(async ({ generateRandomRoomKeyString }) => {
+        try {
+          const newKey = await generateRandomRoomKeyString();
+          localStorage.setItem(keyStorageKey, newKey);
+          setRoomKeyReady(true);
+          toast.success("Secure end-to-end encryption tunnel established.");
+          channel.whisper("share-room-key", { key: newKey });
+          refetch();
+        } catch (e) {
+          console.error("Key derivation loop error:", e);
+        }
+      });
+    }
+
+    // Handle room presence synchronization
+    channel.here((users: any[]) => {
+      const activeKey = localStorage.getItem(keyStorageKey);
+      if (activeKey) {
+        if (users.length > 1) channel.whisper("share-room-key", { key: activeKey });
+      } else {
+        channel.whisper("request-room-key", { requestedBy: uid });
+      }
+    });
+
+    channel.joining((joinedUser: any) => {
+      const activeKey = localStorage.getItem(keyStorageKey);
+      if (activeKey) {
+        channel.whisper("share-room-key", { key: activeKey });
+      }
+    });
+
+    channel.listenForWhisper("request-room-key", () => {
+      const activeKey = localStorage.getItem(keyStorageKey);
+      if (activeKey) {
+        channel.whisper("share-room-key", { key: activeKey });
+      }
+    });
+
+    channel.listenForWhisper("share-room-key", (e: { key: string }) => {
+      const currentKey = localStorage.getItem(keyStorageKey);
+      if (!currentKey && e.key) {
+        localStorage.setItem(keyStorageKey, e.key);
+        // FIX: Signal React that the key is now available, triggering decryption
+        setRoomKeyReady(true);
+        toast.success("Synchronized secure communication key with peer.");
+        refetch();
+      }
+    });
+
+    // Real-time message streaming hook
     channel.listen(".message.sent", async (payload: MessageSentPayload) => {
       const row = payload.message;
-      
-      const rawKeyStr = localStorage.getItem(`room_key_${chatIdNum}`);
-      if (rawKeyStr && row.encrypted_payload && row.iv) {
+      if (!row) return;
+
+      let targetMessageText = row.body || "New secure message received";
+      const currentKey = localStorage.getItem(keyStorageKey);
+
+      if (currentKey && row.encrypted_payload && row.iv) {
         try {
-          const cryptoKey = await importKeyFromString(rawKeyStr);
+          const cryptoKey = await importKeyFromString(currentKey);
           const plainText = await decryptMessage(row.encrypted_payload, row.iv, cryptoKey);
+          targetMessageText = plainText;
           setDecryptedMessages((prev) => ({ ...prev, [row.id]: plainText }));
         } catch (e) {
           console.error("Real-time decryption failure:", e);
+          targetMessageText = "[Encrypted Content Locked]";
+        }
+      }
+
+      if (row.user_id !== uid) {
+        try {
+          notify.info(`${peerName || "Peer"}: ${targetMessageText}`);
+        } catch (err) {
+          console.error("Failed executing UI notification engine hook:", err);
         }
       }
 
@@ -278,7 +340,7 @@ const ChatRoom = () => {
     return () => {
       echo.leave(room);
     };
-  }, [user?.id, chatIdNum, queryClient]);
+  }, [user?.id, chatIdNum, peerId, queryClient, peerName, refetch]);
 
   useEffect(() => {
     const cleanup = setupAutoFlush();
@@ -311,7 +373,13 @@ const ChatRoom = () => {
       try {
         const cryptoKey = await importKeyFromString(rawKeyStr);
         const { ciphertext, iv } = await encryptMessage(text, cryptoKey);
-
+        console.log('[Send Debug]', {
+  plaintext: text,
+  ciphertext_length: ciphertext.length,
+  ciphertext: ciphertext,
+  iv_length: iv.length,
+  iv: iv,
+});
         const { data } = await api.post<ChatMessageApi>(
           `/api/chats/${chatIdNum}/messages`,
           {
@@ -330,13 +398,13 @@ const ChatRoom = () => {
         queryClient.invalidateQueries({ queryKey: ["chats"] });
       } catch (err) {
         console.error("ChatRoom Send Error:", err);
-        enqueueMessage(chatIdNum, text); 
+        enqueueMessage(chatIdNum, text);
         notify.error("Message queued due to an issue.");
       } finally {
         setSending(false);
       }
     },
-    [chatIdNum, queryClient, user],
+    [chatIdNum, queryClient, user?.id],
   );
 
   const invalid = !Number.isFinite(chatIdNum) || chatIdNum <= 0;
@@ -415,11 +483,10 @@ const ChatRoom = () => {
                   </Link>
                 </DropdownMenuItem>
 
-                {/* 💡 RENDER REPORT ACTION DIALOG GRID */}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <DropdownMenuItem 
-                      onSelect={(e) => e.preventDefault()} 
+                    <DropdownMenuItem
+                      onSelect={(e) => e.preventDefault()}
                       className="text-amber-500 focus:text-amber-600 focus:bg-amber-500/10 cursor-pointer"
                     >
                       <Flag className="h-4 w-4 mr-2" />
@@ -435,7 +502,7 @@ const ChatRoom = () => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
+                      <AlertDialogAction
                         onClick={handleReportUser}
                         className="bg-amber-500 text-white hover:bg-amber-600"
                       >
@@ -449,8 +516,8 @@ const ChatRoom = () => {
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <DropdownMenuItem 
-                      onSelect={(e) => e.preventDefault()} 
+                    <DropdownMenuItem
+                      onSelect={(e) => e.preventDefault()}
                       className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                     >
                       <ShieldOff className="h-4 w-4 mr-2" />
@@ -466,7 +533,7 @@ const ChatRoom = () => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
+                      <AlertDialogAction
                         onClick={handleBlockUser}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >

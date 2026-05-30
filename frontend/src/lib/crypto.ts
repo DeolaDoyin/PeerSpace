@@ -1,6 +1,40 @@
 // src/lib/crypto.ts
 
 /**
+ * High-performance, memory-safe conversion from Uint8Array to a Base64 string.
+ * Avoids call-stack overflows caused by using the spread operator on large arrays.
+ */
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+/**
+ * High-performance, memory-safe conversion from a Base64 string to a Uint8Array.
+ */
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
+ * Extracts the exact underlying ArrayBuffer window from a typed array view.
+ * This guarantees Web Crypto won't read trailing garbage padding memory bytes.
+ */
+function getPureBuffer(view: Uint8Array): ArrayBuffer {
+  return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
+}
+
+/**
  * Generates a secure, random cryptographic key for AES-GCM encryption
  */
 export const generateRoomKey = async (): Promise<CryptoKey> => {
@@ -15,21 +49,21 @@ export const generateRoomKey = async (): Promise<CryptoKey> => {
 };
 
 /**
- * Converts a CryptoKey to a string so you can share/store it safely
+ * Converts a CryptoKey to a base64 string so you can share/store it safely
  */
 export const exportKeyToString = async (key: CryptoKey): Promise<string> => {
   const exported = await window.crypto.subtle.exportKey("raw", key);
-  return btoa(String.fromCharCode(...new Uint8Array(exported)));
+  return uint8ArrayToBase64(new Uint8Array(exported));
 };
 
 /**
  * Converts a stored string back into a usable CryptoKey object
  */
 export const importKeyFromString = async (keyStr: string): Promise<CryptoKey> => {
-  const rawKey = Uint8Array.from(atob(keyStr), (c) => c.charCodeAt(0));
+  const rawKey = base64ToUint8Array(keyStr);
   return await window.crypto.subtle.importKey(
     "raw",
-    rawKey,
+    getPureBuffer(rawKey),
     { name: "AES-GCM" },
     true,
     ["encrypt", "decrypt"]
@@ -53,15 +87,15 @@ export const encryptMessage = async (
   const encryptedBuffer = await window.crypto.subtle.encrypt(
     {
       name: "AES-GCM",
-      iv: iv,
+      iv: getPureBuffer(iv),
     },
     key,
-    encodedText
+    getPureBuffer(encodedText)
   );
 
   return {
-    ciphertext: btoa(String.fromCharCode(...new Uint8Array(encryptedBuffer))),
-    iv: btoa(String.fromCharCode(...new Uint8Array(iv))),
+    ciphertext: uint8ArrayToBase64(new Uint8Array(encryptedBuffer)),
+    iv: uint8ArrayToBase64(iv),
   };
 };
 
@@ -73,33 +107,26 @@ export const decryptMessage = async (
   ivStr: string,
   key: CryptoKey
 ): Promise<string> => {
-  const cipherBuffer = Uint8Array.from(atob(ciphertext), (c) => c.charCodeAt(0));
-  const iv = Uint8Array.from(atob(ivStr), (c) => c.charCodeAt(0));
+  const cipherBuffer = base64ToUint8Array(ciphertext);
+  const iv = base64ToUint8Array(ivStr);
 
   const decryptedBuffer = await window.crypto.subtle.decrypt(
     {
       name: "AES-GCM",
-      iv: iv,
+      iv: getPureBuffer(iv),
     },
     key,
-    cipherBuffer
+    getPureBuffer(cipherBuffer)
   );
 
   const decoder = new TextDecoder();
   return decoder.decode(decryptedBuffer);
 };
 
-// 💡 Add this helper to your src/lib/crypto.ts file
+/**
+ * Helper to auto-generate encryption room strings safely
+ */
 export async function generateRandomRoomKeyString(): Promise<string> {
-  const key = await window.crypto.subtle.generateKey(
-    {
-      name: "AES-GCM",
-      length: 256,
-    },
-    true, // extractable
-    ["encrypt", "decrypt"]
-  );
-  
-  const exported = await window.crypto.subtle.exportKey("raw", key);
-  return btoa(String.fromCharCode(...new Uint8Array(exported)));
+  const key = await generateRoomKey();
+  return await exportKeyToString(key);
 }

@@ -101,4 +101,27 @@ class ChatController extends Controller
             ] : null,
         ], $created ? 201 : 200);
     }
+
+    // GET /api/chats/{chat}/room-key  
+public function getRoomKey(Request $request, Chat $chat): JsonResponse
+{
+    $this->authorize('view', $chat);
+    return response()->json(['room_key' => $chat->room_key]);
+}
+
+// POST /api/chats/{chat}/room-key
+public function setRoomKey(Request $request, Chat $chat): JsonResponse
+{
+    $this->authorize('view', $chat);
+    
+    // Only set if not already set — first writer wins
+    if ($chat->room_key) {
+        return response()->json(['room_key' => $chat->room_key]);
+    }
+    
+    $data = $request->validate(['room_key' => ['required', 'string']]);
+    $chat->update(['room_key' => $data['room_key']]);
+    
+    return response()->json(['room_key' => $chat->room_key]);
+}
 }

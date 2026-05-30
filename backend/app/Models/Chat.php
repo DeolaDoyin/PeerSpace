@@ -11,6 +11,7 @@ class Chat extends Model
 {
     protected $fillable = [
         'type',
+        'room_key'
     ];
 
     public function users(): BelongsToMany

@@ -160,4 +160,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             ->name('users.password.update');
     });
 
+    Route::get('/chats/{chat}/room-key', [ChatController::class, 'getRoomKey']);
+    Route::post('/chats/{chat}/room-key', [ChatController::class, 'setRoomKey']);
+
 });
